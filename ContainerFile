@@ -1,0 +1,72 @@
+# ---------------------------------------------------------------------------
+# GCP Role Lookup — Podman-compatible Containerfile
+#
+# Build:  podman build -t gcp-role-lookup .
+#
+# Run (no GCP auth needed for static mode):
+#   podman run --rm -p 8501:8501 gcp-role-lookup
+#
+# Run (with ADC for live refresh):
+#   podman run --rm -p 8501:8501 \
+#     -v ~/.config/gcloud:/home/appuser/.config/gcloud:ro \
+#     -e GOOGLE_APPLICATION_CREDENTIALS=/home/appuser/.config/gcloud/application_default_credentials.json \
+#     gcp-role-lookup
+# ---------------------------------------------------------------------------
+
+FROM python:3.12-slim
+
+# --- Metadata labels (align with your cost attribution / CMDB) ---
+LABEL org.opencontainers.image.title="gcp-role-lookup"
+LABEL org.opencontainers.image.description="GCP IAM role title to role ID resolver"
+LABEL app="gcp-role-lookup"
+LABEL env="internal"
+LABEL maintainer="victory-silver-platform-team"
+
+# --- OS hardening ---
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Non-root user ---
+RUN groupadd --gid 1001 appgroup \
+    && useradd --uid 1001 --gid appgroup \
+       --shell /sbin/nologin \
+       --create-home appuser
+
+WORKDIR /app
+
+# --- Python env vars ---
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# --- Install dependencies as root before dropping privileges ---
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# --- Copy application source ---
+COPY app/ ./app/
+COPY data/ ./data/
+
+# --- Fix ownership ---
+RUN chown -R appuser:appgroup /app
+
+# --- Drop to non-root ---
+USER appuser
+
+EXPOSE 8501
+
+# Streamlit config: disable telemetry, set server options
+ENV STREAMLIT_SERVER_PORT=8501 \
+    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false \
+    STREAMLIT_SERVER_ENABLE_CORS=false \
+    STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=true
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"
+
+ENTRYPOINT ["streamlit", "run", "app/main.py", "--server.headless=true"]
