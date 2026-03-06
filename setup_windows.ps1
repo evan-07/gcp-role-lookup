@@ -1,4 +1,4 @@
-# GCP Role Lookup — Windows Setup Helper
+# GCP Role Lookup - Windows Setup Helper
 #
 # Purpose: Validate prerequisites and set up GCP authentication on Windows.
 # Usage: .\setup_windows.ps1
@@ -17,23 +17,23 @@ param(
 
 # Color output helpers
 function Write-Success {
-    Write-Host "✓ $args" -ForegroundColor Green
+    Write-Host "[OK] $args" -ForegroundColor Green
 }
 
 function Write-Error_ {
-    Write-Host "✗ $args" -ForegroundColor Red
+    Write-Host "[ERROR] $args" -ForegroundColor Red
 }
 
 function Write-Warning_ {
-    Write-Host "⚠ $args" -ForegroundColor Yellow
+    Write-Host "[WARNING] $args" -ForegroundColor Yellow
 }
 
 function Write-Info {
-    Write-Host "ℹ $args" -ForegroundColor Cyan
+    Write-Host "[INFO] $args" -ForegroundColor Cyan
 }
 
 Write-Host ""
-Write-Host "=== GCP Role Lookup — Windows Setup Helper ===" -ForegroundColor Cyan
+Write-Host "=== GCP Role Lookup - Windows Setup Helper ===" -ForegroundColor Cyan
 Write-Host ""
 
 # Check Python
@@ -63,13 +63,46 @@ if ($versionMatch) {
 # Check gcloud
 if (-not $SkipGcloud) {
     Write-Info "Checking gcloud CLI..."
-    $gcloudVersion = & gcloud --version 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error_ "gcloud CLI not found in PATH."
+    
+    # Try to find gcloud in common locations
+    $gcloudBinPath = $null
+    $commonPaths = @(
+        "$env:APPDATA\..\Local\Google\Cloud SDK\google-cloud-sdk\bin",
+        "$env:APPDATA\Google\Cloud SDK\google-cloud-sdk\bin",
+        "C:\Program Files\Google\Cloud SDK\google-cloud-sdk\bin",
+        "C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin"
+    )
+    
+    # Check if gcloud is already in PATH
+    $gcloudCmd = Get-Command gcloud -ErrorAction SilentlyContinue
+    if ($gcloudCmd) {
+        $gcloudBinPath = Split-Path -Parent $gcloudCmd.Source
+        Write-Info "Found gcloud in PATH: $gcloudBinPath"
+    } else {
+        # Try common installation paths
+        foreach ($path in $commonPaths) {
+            if (Test-Path "$path\gcloud.cmd") {
+                $gcloudBinPath = $path
+                Write-Info "Found gcloud at: $gcloudBinPath"
+                Write-Info "Adding to PATH for this session..."
+                $env:Path += ";$gcloudBinPath"
+                break
+            }
+        }
+    }
+    
+    if (-not $gcloudBinPath) {
+        Write-Error_ "gcloud CLI not found in PATH or common locations."
         Write-Info "Install from: https://cloud.google.com/sdk/docs/install"
         exit 1
     }
-    Write-Success "gcloud CLI found"
+    
+    $gcloudVersion = & gcloud --version 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error_ "gcloud CLI found but failed to run: $gcloudVersion"
+        exit 1
+    }
+    Write-Success "gcloud CLI found and working"
 
     # Check if authenticated
     Write-Info "Checking GCP authentication..."
@@ -129,8 +162,16 @@ if (-not $SkipVenv) {
     }
     Write-Success "Virtual environment activated"
 
+    Write-Info "Upgrading pip..."
+    & python -m pip install --upgrade pip --quiet
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning_ "Failed to upgrade pip, continuing anyway..."
+    } else {
+        Write-Success "pip upgraded"
+    }
+
     Write-Info "Installing Python dependencies..."
-    & pip install -r requirements.txt --quiet
+    & pip install -r requirements.txt --prefer-binary --quiet
     if ($LASTEXITCODE -ne 0) {
         Write-Error_ "Failed to install dependencies."
         exit 1
