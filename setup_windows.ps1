@@ -6,7 +6,7 @@
 # This script will:
 # 1. Check for Python 3.12+
 # 2. Check for gcloud CLI
-# 3. Guide you through gcloud auth application-default login
+# 3. Optionally guide you through gcloud auth application-default login
 # 4. Create .env file template
 # 5. Create virtual environment and install dependencies
 
@@ -35,6 +35,16 @@ function Write-Info {
 Write-Host ""
 Write-Host "=== GCP Role Lookup - Windows Setup Helper ===" -ForegroundColor Cyan
 Write-Host ""
+
+# Ask once, up front, whether ADC setup is desired (optional)
+$setupAdcNow = $false
+if (-not $SkipGcloud) {
+    Write-Info "ADC login is optional (only needed for live role refresh)."
+    $adcResponse = Read-Host "Do you want to configure ADC now? (y/n)"
+    if ($adcResponse -match '^(y|yes)$') {
+        $setupAdcNow = $true
+    }
+}
 
 # Check Python
 Write-Info "Checking Python 3.12+..."
@@ -104,23 +114,17 @@ if (-not $SkipGcloud) {
     }
     Write-Success "gcloud CLI found and working"
 
-    # Check if authenticated
-    Write-Info "Checking GCP authentication..."
-    $accounts = & gcloud auth list 2>&1
-    if ($accounts -match "ACTIVE  \*") {
-        Write-Success "GCP account authenticated"
-    } else {
-        Write-Warning_ "No active GCP account detected."
-        Write-Info "Run: gcloud auth application-default login"
-        $response = Read-Host "Set up authentication now? (y/n)"
-        if ($response -eq 'y') {
-            & gcloud auth application-default login
-            if ($LASTEXITCODE -ne 0) {
-                Write-Error_ "Authentication failed."
-                exit 1
-            }
-            Write-Success "Authentication successful"
+    if ($setupAdcNow) {
+        Write-Info "Starting optional ADC login..."
+        & gcloud auth application-default login
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error_ "ADC authentication failed."
+            exit 1
         }
+        Write-Success "ADC authentication successful"
+    } else {
+        Write-Info "Skipping ADC login (optional)."
+        Write-Info "You can run later: gcloud auth application-default login"
     }
 }
 
@@ -182,8 +186,5 @@ if (-not $SkipVenv) {
 Write-Host ""
 Write-Host "=== Setup Complete ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "1. Activate venv:     .\.venv\Scripts\Activate.ps1"
-Write-Host "2. Refresh role data: python scripts\refresh_roles.py"
-Write-Host "3. Start Streamlit:   streamlit run app\main.py"
-Write-Host ""
+Write-Host "Starting Streamlit on http://localhost:8501 ..." -ForegroundColor Cyan
+& streamlit run app/main.py

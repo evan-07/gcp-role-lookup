@@ -54,6 +54,7 @@ gcp-role-lookup/
 │   ├── gcp_roles.json         # Role title/name cache used by app
 │   └── role_permissions.json  # Permission map used for supersession checks
 ├── setup_windows.ps1          # Windows helper setup script
+├── setup_linux.sh             # Linux/macOS helper setup script
 ├── requirements.txt
 ├── ContainerFile              # Podman/Docker build file
 └── README.md
@@ -133,8 +134,9 @@ From PowerShell in the repository root:
 What this script does:
 - Checks Python 3.12+
 - Checks `gcloud` (unless skipped)
-- Helps with authentication flow
+- Offers optional ADC login at the start (for live refresh only)
 - Creates `.venv` and installs dependencies
+- Starts Streamlit automatically
 
 If PowerShell blocks script execution:
 
@@ -142,10 +144,11 @@ If PowerShell blocks script execution:
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-Then start the app:
+Optional flags:
 
 ```powershell
-streamlit run app/main.py
+.\setup_windows.ps1 -SkipGcloud
+.\setup_windows.ps1 -SkipVenv
 ```
 
 ### Option B: manual setup
@@ -162,6 +165,29 @@ App URL: <http://localhost:8501>
 ---
 
 ## Run on Linux/macOS
+
+### Option A (recommended): helper script
+
+```bash
+chmod +x setup_linux.sh
+./setup_linux.sh
+```
+
+What this script does:
+- Checks Python 3.12+
+- Checks `gcloud` (unless skipped)
+- Offers optional ADC login at the start (for live refresh only)
+- Creates/activates `.venv` and installs dependencies
+- Starts Streamlit automatically
+
+Optional flags:
+
+```bash
+./setup_linux.sh --skip-gcloud
+./setup_linux.sh --skip-venv
+```
+
+### Option B: manual setup
 
 ```bash
 python3 -m venv .venv
