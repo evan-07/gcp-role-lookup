@@ -13,7 +13,7 @@ Before you start, ensure you have:
 
 - **Python 3.12 or later** — [Download](https://www.python.org/downloads/)
 - **gcloud CLI** — [Install](https://cloud.google.com/sdk/docs/install)
-- **GCP credentials** — See [Authentication](#authentication) below
+- **GCP credentials** — See [Authentication](#authentication) below (Optional)
 
 ### Verify Prerequisites
 
@@ -25,9 +25,9 @@ gcloud auth list          # Should show active account
 
 ---
 
-## Authentication
+## Authentication (Optional)
 
-This tool requires GCP credentials to refresh role data from the IAM API.
+This tool requires GCP credentials to refresh role data from the IAM API. This is required only if a refresh of role and permissions data is needed. 
 
 ### Option 1: Application Default Credentials (Recommended for Development)
 
@@ -74,33 +74,12 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
 
 2. **Create and activate a virtual environment:**
    ```powershell
-   python -m venv .venv
-   .venv\Scripts\Activate.ps1
+   .\setup_windows.ps1
    ```
    > If you get a permissions error, run:
    > ```powershell
    > Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
    > ```
-
-3. **Install dependencies:**
-   ```powershell
-   pip install -r requirements.txt
-   ```
-
-4. **Authenticate with GCP (first time only):**
-   ```powershell
-   gcloud auth application-default login
-   ```
-
-5. **Refresh role data (optional, but recommended):**
-   ```powershell
-   python scripts/refresh_roles.py
-   ```
-
-6. **Run Streamlit:**
-   ```powershell
-   streamlit run app/main.py
-   ```
 
    Streamlit will automatically open `http://localhost:8501` in your browser.
 
@@ -123,17 +102,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
    pip install -r requirements.txt
    ```
 
-4. **Authenticate with GCP (first time only):**
-   ```bash
-   gcloud auth application-default login
-   ```
-
-5. **Refresh role data (optional, but recommended):**
-   ```bash
-   python3 scripts/refresh_roles.py
-   ```
-
-6. **Run Streamlit:**
+4. **Run Streamlit:**
    ```bash
    streamlit run app/main.py
    ```
