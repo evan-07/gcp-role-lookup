@@ -36,6 +36,25 @@ Input a list of role titles (one per line), then the app:
 3. Produces Terraform HCL-style output suitable for IAM role lists.
 4. Optionally comments out roles that are superseded by broader roles in the same batch.
 
+### Application Flow
+
+```mermaid
+flowchart TD
+    A[User enters IAM role titles\none per line in Streamlit UI] --> B[Load role catalog\nlocal JSON cache]
+    B --> C{Live refresh enabled\nand credentials available?}
+    C -- Yes --> D[Pull latest roles + permissions\nfrom IAM API]
+    C -- No --> E[Continue with bundled role data]
+    D --> F[Normalize role titles]
+    E --> F
+    F --> G[Run fuzzy matching\nfor each input title]
+    G --> H[Assign confidence labels\nexact/high/medium/low/not found]
+    H --> I{Supersession\ncheck enabled?}
+    I -- Yes --> J[Compare permissions\nwithin matched role set]
+    I -- No --> K[Render Terraform-ready role list]
+    J --> K
+    K --> L[Display results + review notes\nin Streamlit output panel]
+```
+
 ---
 
 ## Repository Layout
