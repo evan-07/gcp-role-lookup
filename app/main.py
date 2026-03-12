@@ -23,6 +23,26 @@ from app.formatter import format_as_terraform, format_results_summary
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+INPUT_TEMPLATES: dict[str, str] = {
+    "BigQuery analyst": (
+        "BigQuery Data Viewer\n"
+        "BigQuery Job User\n"
+        "BigQuery Metadata Viewer"
+    ),
+    "Data engineering": (
+        "BigQuery Data Editor\n"
+        "Storage Object Admin\n"
+        "Pub/Sub Publisher\n"
+        "Pub/Sub Subscriber"
+    ),
+    "Platform operations": (
+        "Kubernetes Engine Admin\n"
+        "Compute Admin\n"
+        "Service Account User\n"
+        "Logging Admin"
+    ),
+}
+
 # ---------------------------------------------------------------------------
 # Page config
 # ---------------------------------------------------------------------------
@@ -130,6 +150,9 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+if "role_input" not in st.session_state:
+    st.session_state.role_input = ""
 
 
 # ---------------------------------------------------------------------------
@@ -246,15 +269,32 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-col_input, col_output = st.columns([1, 2], gap="large")
+col_input, col_output = st.columns([1.1, 1.9], gap="large")
 
 with col_input:
+    st.markdown(
+        "<div class='section-label'>Input Panel</div>",
+        unsafe_allow_html=True,
+    )
+
+    template_name = st.selectbox(
+        "Quick-start examples",
+        options=["Custom"] + list(INPUT_TEMPLATES.keys()),
+        help="Choose a ready-made set of role titles and load it into the input box.",
+    )
+
+    if st.button("Use selected example", use_container_width=True):
+        if template_name != "Custom":
+            st.session_state.role_input = INPUT_TEMPLATES[template_name]
+            st.rerun()
+
     st.markdown(
         "<div class='section-label'>Role Titles — one per line</div>",
         unsafe_allow_html=True,
     )
     input_text = st.text_area(
         label="Role Titles Input",
+        key="role_input",
         placeholder=(
             "BigQuery Connection User\n"
             "BigQuery Data Editor\n"
@@ -264,6 +304,9 @@ with col_input:
         ),
         label_visibility="collapsed",
     )
+
+    non_empty_lines = [line for line in input_text.splitlines() if line.strip()]
+    st.caption(f"{len(non_empty_lines)} role title(s) queued")
 
     col_btn1, col_btn2 = st.columns([1, 1])
     with col_btn1:
@@ -280,7 +323,15 @@ with col_input:
         )
 
     if clear_clicked:
+        st.session_state.role_input = ""
         st.rerun()
+
+    with st.expander("How this works", expanded=False):
+        st.markdown(
+            "- Paste role titles from tickets, docs, or spreadsheets.\n"
+            "- Click **Resolve Roles** to map titles to IAM role IDs.\n"
+            "- Review any fuzzy matches in **Review Required** before copying Terraform output."
+        )
 
 
 # ---------------------------------------------------------------------------
