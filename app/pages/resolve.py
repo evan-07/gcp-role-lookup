@@ -135,18 +135,21 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             st.session_state["resolve_input"] = ""
             st.rerun()
 
+    # Compute results before col_output so they're accessible for the
+    # full-width review table rendered outside the columns block.
+    results: list[MatchResult] | None = None
+    if resolve_clicked and input_text.strip() and roles:
+        results = match_titles_bulk(input_text, roles)
+        if permissions:
+            check_supersessions(results, permissions, roles)
+
     with col_output:
         st.markdown(
             "<div class='section-label'>Terraform HCL Output</div>",
             unsafe_allow_html=True,
         )
 
-        if resolve_clicked and input_text.strip() and roles:
-            results: list[MatchResult] = match_titles_bulk(input_text, roles)
-
-            if permissions:
-                check_supersessions(results, permissions, roles)
-
+        if results is not None:
             summary = format_results_summary(results)
             hcl_output = format_as_terraform(results)
 
@@ -184,7 +187,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             )
 
     # --- Review Required table (full-width, below columns) ---
-    if resolve_clicked and input_text.strip() and roles and "results" in dir():
+    if results is not None:
         review_rows = []
         for r in results:
             if r.status in ("exact", "empty") and not r.supersession:
