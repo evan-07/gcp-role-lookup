@@ -2,8 +2,8 @@
 main.py
 
 Streamlit entry point for the GCP Role Lookup tool.
-Provides a UI for resolving GCP role titles to role IDs,
-with fuzzy matching, supersession detection, and Terraform HCL output.
+Handles page config, global CSS, session state init, data loading,
+sidebar navigation, and dispatch to active page modules.
 """
 
 import sys
@@ -12,19 +12,15 @@ from pathlib import Path
 
 import streamlit as st
 
-# Allow running from repo root or app/ directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.role_loader import load_roles, load_permissions, refresh_roles_from_api
-from app.matcher import match_titles_bulk, MatchResult
-from app.supersession import check_supersessions
-from app.formatter import format_as_terraform, format_results_summary
+from app.role_loader import load_roles, load_permissions
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Page config
+# Page config (must be first Streamlit call)
 # ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="GCP Role Lookup",
@@ -34,7 +30,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------------------------
-# Custom CSS
+# Global CSS
 # ---------------------------------------------------------------------------
 st.markdown(
     """
@@ -98,7 +94,6 @@ st.markdown(
         font-size: 0.82rem;
       }
 
-
       .section-label {
         font-size: 0.70rem; font-weight: 600; letter-spacing: 0.1em;
         text-transform: uppercase; color: #7d8590;
@@ -131,10 +126,27 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ---------------------------------------------------------------------------
+# Session state initialization
+# ---------------------------------------------------------------------------
+_DEFAULTS: dict = {
+    "page": "resolve",
+    "resolve_input": "",
+    "inspect_role_a": "",
+    "inspect_role_b": "",
+    "inspect_diff_mode": False,
+    "permission_search_query": "",
+    "roles_load_error": None,
+}
+for _key, _val in _DEFAULTS.items():
+    if _key not in st.session_state:
+        st.session_state[_key] = _val
 
 # ---------------------------------------------------------------------------
 # Cached loaders
 # ---------------------------------------------------------------------------
+
+
 @st.cache_data(show_spinner=False)
 def get_roles() -> list[dict]:
     """Load and cache roles from disk."""
@@ -147,14 +159,24 @@ def get_permissions() -> dict[str, set[str]]:
     return load_permissions()
 
 
-def clear_all_caches() -> None:
-    """Clear both Streamlit caches to force reload."""
-    get_roles.clear()
-    get_permissions.clear()
+# ---------------------------------------------------------------------------
+# Data loading
+# ---------------------------------------------------------------------------
+try:
+    roles_data: list[dict] = get_roles()
+    st.session_state["roles_load_error"] = None
+except (FileNotFoundError, ValueError) as exc:
+    roles_data = []
+    st.session_state["roles_load_error"] = str(exc)
 
+try:
+    permissions_data: dict[str, set[str]] = get_permissions()
+except Exception as exc:  # noqa: BLE001
+    logger.warning("Unexpected error loading permissions: %s", exc)
+    permissions_data = {}
 
 # ---------------------------------------------------------------------------
-# Sidebar
+# Sidebar: brand header + nav buttons
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.markdown(
@@ -172,232 +194,41 @@ with st.sidebar:
 
     st.divider()
 
-    st.markdown(
-        "<div class='section-label'>Data Source</div>",
-        unsafe_allow_html=True,
-    )
+    page = st.session_state["page"]
 
-    roles_data: list[dict] = []
-    try:
-        roles_data = get_roles()
-        st.success(f"✓ {len(roles_data)} roles loaded")
-    except FileNotFoundError as exc:
-        st.error(str(exc))
-    except ValueError as exc:
-        st.error(str(exc))
-
-    permissions_data: dict[str, set[str]] = get_permissions()
-    if permissions_data:
-        st.success(
-            f"✓ Permissions loaded for {len(permissions_data)} roles"
-        )
-    else:
-        st.warning(
-            "⚠️ role_permissions.json not found. "
-            "Supersession checking disabled. "
-            "Run `refresh_roles.sh` to enable it."
-        )
-
-    st.divider()
-
-    st.markdown(
-        "<div class='section-label'>Live Refresh</div>",
-        unsafe_allow_html=True,
-    )
-    st.caption(
-        "Requires GCP credentials via ADC. "
-        "Service account needs `roles/iam.roleViewer`."
-    )
-
-    if st.button("↻ Refresh from GCP API", use_container_width=True):
-        with st.spinner("Calling GCP IAM API…"):
-            success, msg = refresh_roles_from_api()
-        if success:
-            clear_all_caches()
-            roles_data = get_roles()
-            permissions_data = get_permissions()
-            st.success(msg)
-        else:
-            st.error(msg)
-
-    st.divider()
-    st.caption(
-        "💡 Match thresholds: ≥85% High · 60–84% Medium · <60% Low\n\n"
-        "⛔ Superseded = another role in your batch fully contains "
-        "this role's permissions."
-    )
-
-
-# ---------------------------------------------------------------------------
-# Main layout
-# ---------------------------------------------------------------------------
-st.markdown(
-    """
-    <div class="app-header">
-      <div>
-        <h1>🔐 GCP Role Lookup</h1>
-        <p>
-          Resolve GCP IAM role titles to role IDs ·
-          Supersession detection · Terraform HCL output
-        </p>
-      </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-col_input, col_output = st.columns([1, 2], gap="large")
-
-with col_input:
-    st.markdown(
-        "<div class='section-label'>Role Titles — one per line</div>",
-        unsafe_allow_html=True,
-    )
-    input_text = st.text_area(
-        label="Role Titles Input",
-        placeholder=(
-            "BigQuery Connection User\n"
-            "BigQuery Data Editor\n"
-            "BigQuery Data Viewer\n"
-            "BigQuery Job User\n"
-            "Storage Admin"
-        ),
-        label_visibility="collapsed",
-    )
-
-    col_btn1, col_btn2 = st.columns([1, 1])
-    with col_btn1:
-        resolve_clicked = st.button(
-            "Resolve Roles →",
-            type="primary",
-            use_container_width=True,
-            disabled=not roles_data,
-        )
-    with col_btn2:
-        clear_clicked = st.button(
-            "Clear",
-            use_container_width=True,
-        )
-
-    if clear_clicked:
+    if st.button(
+        "Resolve Titles",
+        type="primary" if page == "resolve" else "secondary",
+        use_container_width=True,
+    ):
+        st.session_state["page"] = "resolve"
         st.rerun()
 
+    if st.button(
+        "Role Inspector",
+        type="primary" if page == "inspect" else "secondary",
+        use_container_width=True,
+    ):
+        st.session_state["page"] = "inspect"
+        st.rerun()
+
+    if st.button(
+        "Permission Search",
+        type="primary" if page == "permissions" else "secondary",
+        use_container_width=True,
+    ):
+        st.session_state["page"] = "permissions"
+        st.rerun()
 
 # ---------------------------------------------------------------------------
-# Output column
+# Dispatch to active page
 # ---------------------------------------------------------------------------
-with col_output:
-    st.markdown(
-        "<div class='section-label'>Terraform HCL Output</div>",
-        unsafe_allow_html=True,
-    )
-
-    if resolve_clicked and input_text.strip() and roles_data:
-
-        # 1. Match
-        results: list[MatchResult] = match_titles_bulk(
-            input_text, roles_data
-        )
-
-        # 2. Supersession (skipped gracefully if permissions missing)
-        if permissions_data:
-            check_supersessions(results, permissions_data, roles_data)
-
-        # 3. Format + summarise
-        summary = format_results_summary(results)
-        hcl_output = format_as_terraform(results)
-
-        # Stat badges
-        total = sum(v for k, v in summary.items() if k != "empty")
-        fuzzy = summary["high"] + summary["medium"]
-        missed = summary["low"] + summary["not_found"]
-
-        st.markdown(
-            f"""
-            <div class="stat-row">
-              <span class="stat-badge badge-total">{total} inputs</span>
-              <span class="stat-badge badge-exact">✓ {summary['exact']} exact</span>
-              <span class="stat-badge badge-fuzzy">~ {fuzzy} fuzzy</span>
-              <span class="stat-badge badge-miss">✗ {missed} unresolved</span>
-              <span class="stat-badge badge-superseded">⛔ {summary['superseded']} superseded</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        # HCL output — st.code provides syntax highlighting + copy button
-        st.code(hcl_output, language="hcl")
-
-    elif resolve_clicked and not roles_data:
-        st.error(
-            "Roles data could not be loaded. "
-            "Check the sidebar for details."
-        )
-
-    else:
-        st.markdown(
-            "<div class='hcl-placeholder'>"
-            "← Enter role titles and click Resolve Roles"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-
-# ---------------------------------------------------------------------------
-# Review Required — full-width collapsible table, rendered after columns
-# Only shown when there is something to review from the last resolve run
-# ---------------------------------------------------------------------------
-if resolve_clicked and input_text.strip() and roles_data and 'results' in dir():
-    import pandas as pd
-
-    review_rows = []
-    for r in results:
-        if r.status in ("exact", "empty") and not r.supersession:
-            continue
-
-        if r.supersession:
-            status_label = "⛔ Superseded"
-            note = f"Covered by: {r.supersession.superseded_by_title}"
-        elif r.status == "high":
-            status_label = "~ High confidence"
-            note = f"Matched: {r.matched_title}"
-        elif r.status == "medium":
-            status_label = "~ Medium confidence"
-            note = f"Matched: {r.matched_title}"
-        elif r.status == "low":
-            status_label = "✗ Low confidence"
-            suggestions = "; ".join(
-                f"{s['title']} ({s['confidence']}%)"
-                for s in (r.suggestions or [])
-            )
-            note = f"Suggestions: {suggestions}" if suggestions else "No suggestions"
-        else:
-            status_label = "✗ Not found"
-            note = ""
-
-        review_rows.append({
-            "Status":        status_label,
-            "Input Title":   r.input_title,
-            "Matched Title": r.matched_title or "—",
-            "Confidence":    f"{r.confidence}%" if r.confidence else "—",
-            "Note":          note,
-        })
-
-    if review_rows:
-        with st.expander(
-            f"⚠️ Review Required — {len(review_rows)} item(s)",
-            expanded=False,
-        ):
-            df = pd.DataFrame(review_rows)
-            st.dataframe(
-                df,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "Status":        st.column_config.TextColumn(width="medium"),
-                    "Input Title":   st.column_config.TextColumn(width="medium"),
-                    "Matched Title": st.column_config.TextColumn(width="medium"),
-                    "Confidence":    st.column_config.TextColumn(width="small"),
-                    "Note":          st.column_config.TextColumn(width="large"),
-                },
-            )
+if page == "resolve":
+    from pages.resolve import render as render_resolve
+    render_resolve(roles_data, permissions_data)
+elif page == "inspect":
+    from pages.inspect import render as render_inspect
+    render_inspect(roles_data, permissions_data)
+elif page == "permissions":
+    from pages.permissions import render as render_permissions
+    render_permissions(roles_data, permissions_data)
