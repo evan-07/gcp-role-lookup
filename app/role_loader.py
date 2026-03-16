@@ -254,3 +254,9 @@ def load_permissions() -> dict[str, set[str]]:
         for role_id, perms in raw.items()
         if isinstance(perms, list)
     }
+
+
+def clear_all_caches() -> None:
+    """Clear all Streamlit data caches (affects all active server sessions)."""
+    import streamlit as st
+    st.cache_data.clear()
