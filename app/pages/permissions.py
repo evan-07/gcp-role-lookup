@@ -8,7 +8,6 @@ finds every role that grants it and displays a Terraform-ready list.
 import sys
 from pathlib import Path
 
-import pandas as pd
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -84,6 +83,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
 
     st.caption(f"{len(matches)} role(s) grant this permission.")
 
+    import pandas as pd
     df = pd.DataFrame(sorted_rows)
     st.dataframe(df, use_container_width=True, hide_index=True)
 
