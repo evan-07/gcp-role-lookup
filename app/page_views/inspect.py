@@ -30,6 +30,19 @@ def group_permissions(perms: set[str]) -> dict[str, list[str]]:
     return dict(sorted(groups.items(), key=lambda x: (x[0] == "other", x[0])))
 
 
+def _render_grouped(perms: set[str]) -> None:
+    """Render permissions as collapsed expanders grouped by service.
+
+    Shows plain '(none)' text if the set is empty.
+    """
+    if not perms:
+        st.text("(none)")
+        return
+    for service, plist in group_permissions(perms).items():
+        with st.expander(f"{service} ({len(plist)})", expanded=False):
+            st.code("\n".join(plist), language=None)
+
+
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Role Inspector page."""
 
@@ -104,7 +117,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             # Single-role output
             st.subheader(role_title_map.get(role_a_id, "(custom role)"))
             st.caption(f"{len(perms_a)} permissions")
-            st.code("\n".join(sorted(perms_a)), language=None)
+            _render_grouped(perms_a)
             return
 
         # Diff mode — Role B evaluation
@@ -114,14 +127,14 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             # Diff on but Role B empty — show Role A only
             st.subheader(role_title_map.get(role_a_id, "(custom role)"))
             st.caption(f"{len(perms_a)} permissions")
-            st.code("\n".join(sorted(perms_a)), language=None)
+            _render_grouped(perms_a)
             return
 
         # Role B not found anywhere
         if role_b_id not in permissions and role_b_id not in role_title_map:
             st.subheader(role_title_map.get(role_a_id, "(custom role)"))
             st.caption(f"{len(perms_a)} permissions")
-            st.code("\n".join(sorted(perms_a)), language=None)
+            _render_grouped(perms_a)
             st.error(f"Role ID not found: {role_b_id}")
             return
 
@@ -129,7 +142,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
         if role_b_id not in permissions:
             st.subheader(role_title_map.get(role_a_id, "(custom role)"))
             st.caption(f"{len(perms_a)} permissions")
-            st.code("\n".join(sorted(perms_a)), language=None)
+            _render_grouped(perms_a)
             st.warning("Permission data unavailable for Role B.")
             return
 
@@ -148,23 +161,14 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
         with diff_col_a:
             st.subheader("Only in A")
             st.caption(f"{title_a} · {len(only_a)} permissions")
-            st.code(
-                "\n".join(sorted(only_a)) if only_a else "(none)",
-                language=None,
-            )
+            _render_grouped(only_a)
 
         with diff_col_both:
             st.subheader("In both")
             st.caption(f"{len(in_both)} permissions")
-            st.code(
-                "\n".join(sorted(in_both)) if in_both else "(none)",
-                language=None,
-            )
+            _render_grouped(in_both)
 
         with diff_col_b:
             st.subheader("Only in B")
             st.caption(f"{title_b} · {len(only_b)} permissions")
-            st.code(
-                "\n".join(sorted(only_b)) if only_b else "(none)",
-                language=None,
-            )
+            _render_grouped(only_b)
