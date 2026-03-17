@@ -80,4 +80,78 @@ def find_smallest_roles(
 
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Find Smallest Role page."""
-    pass  # implemented in Task 2
+
+    if not permissions:
+        st.warning(
+            "Permission data is not loaded. "
+            "Please use the Refresh button on the Resolve Titles page."
+        )
+        return
+
+    role_title_map = {r["name"]: r["title"] for r in roles}
+
+    st.markdown(
+        "<div class='section-label'>Required Permissions — one per line</div>",
+        unsafe_allow_html=True,
+    )
+    st.text_area(
+        "Required permissions",
+        placeholder="bigquery.tables.create\nbigquery.tables.delete\nbigquery.datasets.get",
+        label_visibility="collapsed",
+        key="find_role_input",
+    )
+
+    find_clicked = st.button("Find Role →", type="primary")
+
+    if not find_clicked:
+        return
+
+    required = parse_permissions_input(st.session_state["find_role_input"])
+
+    if not required:
+        st.info("Enter at least one permission to search.")
+        return
+
+    exact, partial = find_smallest_roles(required, permissions, role_title_map)
+
+    if not exact and not partial:
+        st.info("No roles found granting any of the required permissions.")
+        return
+
+    import pandas as pd  # deferred to avoid module-level Streamlit dependency in tests
+
+    if exact:
+        st.markdown(
+            "<div class='section-label'>Exact Matches</div>",
+            unsafe_allow_html=True,
+        )
+        st.caption(f"{len(exact)} role(s) grant all {len(required)} required permissions.")
+        df_exact = pd.DataFrame([
+            {
+                "Role ID": e["role_id"],
+                "Title": e["title"],
+                "Total Permissions": e["total_perms"],
+            }
+            for e in exact
+        ])
+        st.dataframe(df_exact, use_container_width=True, hide_index=True)
+
+    if partial:
+        st.markdown(
+            "<div class='section-label'>Partial Matches</div>",
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            f"No single role grants all {len(required)} permissions. "
+            "Top partial matches:"
+        )
+        df_partial = pd.DataFrame([
+            {
+                "Role ID": p["role_id"],
+                "Title": p["title"],
+                "Covers": f"{p['covered']} / {len(required)}",
+                "Total Permissions": p["total_perms"],
+            }
+            for p in partial
+        ])
+        st.dataframe(df_partial, use_container_width=True, hide_index=True)

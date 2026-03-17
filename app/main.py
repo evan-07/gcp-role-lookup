@@ -137,6 +137,7 @@ _DEFAULTS: dict = {
     "inspect_diff_mode": False,
     "permission_search_query": "",
     "resolve_output_format": "HCL",
+    "find_role_input": "",
     "roles_load_error": None,
 }
 for _key, _val in _DEFAULTS.items():
@@ -221,6 +222,14 @@ with st.sidebar:
         st.session_state["page"] = "permissions"
         st.rerun()
 
+    if st.button(
+        "Find Smallest Role",
+        type="primary" if page == "find_role" else "secondary",
+        use_container_width=True,
+    ):
+        st.session_state["page"] = "find_role"
+        st.rerun()
+
 # ---------------------------------------------------------------------------
 # Dispatch to active page
 # ---------------------------------------------------------------------------
@@ -233,3 +242,6 @@ elif st.session_state["page"] == "inspect":
 elif st.session_state["page"] == "permissions":
     from page_views.permissions import render as render_permissions
     render_permissions(roles_data, permissions_data)
+elif st.session_state["page"] == "find_role":
+    from page_views.find_role import render as render_find_role
+    render_find_role(roles_data, permissions_data)
