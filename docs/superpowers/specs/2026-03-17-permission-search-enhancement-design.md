@@ -40,10 +40,10 @@ Identical to the current output:
 Shown when 1 or more permission strings contain the query as a substring (and the query is 3+ characters).
 
 Output:
-- Caption: `"N permission string(s) contain '{query}'."`  (if truncated: `"Showing first 100 of N."`)
-- Table with two columns: **Permission** (the full permission string) and **# Roles** (count of roles granting it)
+- Caption: `"N permission string(s) contain '{query}'."` — if results are truncated the caption reads `"N permission string(s) contain '{query}'. Showing first 100 — refine your query to narrow results."`
+- Table with two columns: **Permission** (lowercased permission string) and **# Roles** (count of roles granting it)
 - Rows sorted by `# Roles` descending, then permission string alphabetically
-- Maximum 100 rows displayed; if more exist, a note appears below: `"Showing first 100 of N matching permissions. Refine your query to narrow results."`
+- Maximum 100 rows displayed
 - The exact query string is excluded from this table (it appears in Exact Matches if applicable)
 
 ### No Results
@@ -69,13 +69,15 @@ def find_exact_matches(query: str, permissions: dict[str, set[str]]) -> list[str
     )
 ```
 
-### New: `find_partial_matches(query: str, permissions: dict[str, set[str]], limit: int = 100) -> list[tuple[str, int]]`
-Returns list of `(permission_string, role_count)` tuples for permissions containing the query as a substring, excluding exact matches, sorted by role_count descending then alphabetically, capped at `limit`.
+### New: `find_partial_matches(query: str, permissions: dict[str, set[str]], limit: int = 100) -> tuple[list[tuple[str, int]], int]`
+Returns `(rows, total_count)` where `rows` is a list of `(permission_string, role_count)` tuples for permissions containing the query as a substring (excluding exact match), sorted by role_count descending then alphabetically, capped at `limit`. `total_count` is the full count before capping.
+
+All permission strings are lowercased before counting. If the source data contains the same permission with different casings across roles, they are merged into one lowercased key — this is intentional normalisation.
 
 ```python
 def find_partial_matches(
     query: str, permissions: dict[str, set[str]], limit: int = 100
-) -> list[tuple[str, int]]:
+) -> tuple[list[tuple[str, int]], int]:
     q = query.lower()
     counts: dict[str, int] = {}
     for perms in permissions.values():
@@ -86,8 +88,6 @@ def find_partial_matches(
     results = sorted(counts.items(), key=lambda x: (-x[1], x[0]))
     return results[:limit], len(counts)
 ```
-
-Note: returns a tuple `(results, total_count)` so the caller can show a truncation notice.
 
 ---
 
@@ -117,7 +117,11 @@ if exact_matches:
 # Partial matches section
 if partial_rows:
     st.markdown("<div class='section-label'>Partial Matches</div>", unsafe_allow_html=True)
-    st.caption(f"{partial_total} permission string(s) contain '{query}'." + truncation_note)
+    truncation_note = (
+        f" Showing first {len(partial_rows)} — refine your query to narrow results."
+        if partial_total > len(partial_rows) else ""
+    )
+    st.caption(f"{partial_total} permission string(s) contain '{query}'.{truncation_note}")
     # ... table with Permission + # Roles columns ...
 ```
 
