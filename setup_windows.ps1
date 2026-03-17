@@ -185,6 +185,13 @@ if (-not $SkipVenv) {
         exit 1
     }
     Write-Success "Dependencies installed"
+
+    & pip install -e . --no-deps --quiet
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error_ "Failed to install package in editable mode."
+        exit 1
+    }
+    Write-Success "Package installed in editable mode"
 }
 
 Write-Host ""

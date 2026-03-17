@@ -109,6 +109,8 @@ if [ "$SKIP_VENV" = false ]; then
 
   info "Installing Python dependencies..."
   pip install -r requirements.txt --prefer-binary
+  pip install -e . --no-deps
+  success "Package installed in editable mode"
   success "Dependencies installed"
 else
   info "Skipping virtual environment setup (--skip-venv)."

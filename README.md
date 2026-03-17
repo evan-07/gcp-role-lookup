@@ -173,6 +173,7 @@ Optional flags:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+pip install -e . --no-deps
 streamlit run app/main.py
 ```
 
@@ -204,6 +205,7 @@ Optional flags:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e . --no-deps
 streamlit run app/main.py
 ```
 
@@ -324,20 +326,17 @@ If `role_permissions.json` is missing, supersession checks are skipped and the a
 
 ## Running Tests
 
-Install dev dependencies first (includes pytest):
+Install dev dependencies and register the package:
 
 ```bash
 pip install -r requirements-dev.txt
+pip install -e . --no-deps
 ```
 
 Then run:
 
 ```bash
-# Windows
-.venv\Scripts\python -m pytest tests/ -v
-
-# Linux/macOS
-.venv/bin/python -m pytest tests/ -v
+pytest
 ```
 
 The test suite covers matching logic, permission grouping, search functions, role loader, and the Find Smallest Role algorithm (43 tests total).
