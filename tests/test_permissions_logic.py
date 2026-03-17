@@ -7,12 +7,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "app"))
 
 
 def test_sort_key_predefined_role():
-    from pages.permissions import sort_key
+    from page_views.permissions import sort_key
     assert sort_key("roles/bigquery.dataEditor") == (0, "roles/bigquery.dataEditor")
 
 
 def test_sort_key_project_role():
-    from pages.permissions import sort_key
+    from page_views.permissions import sort_key
     assert sort_key("projects/my-project/roles/customRole") == (
         1,
         "projects/my-project/roles/customRole",
@@ -20,7 +20,7 @@ def test_sort_key_project_role():
 
 
 def test_sort_key_org_role():
-    from pages.permissions import sort_key
+    from page_views.permissions import sort_key
     assert sort_key("organizations/123/roles/customRole") == (
         2,
         "organizations/123/roles/customRole",
@@ -28,12 +28,12 @@ def test_sort_key_org_role():
 
 
 def test_sort_key_unknown_bucket():
-    from pages.permissions import sort_key
+    from page_views.permissions import sort_key
     assert sort_key("unknown/role") == (3, "unknown/role")
 
 
 def test_sort_predefined_before_project():
-    from pages.permissions import sort_key
+    from page_views.permissions import sort_key
     assert sort_key("roles/a") < sort_key("projects/b")
 
 
