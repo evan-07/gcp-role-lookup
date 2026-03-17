@@ -113,7 +113,8 @@ st.markdown(
       }
       .stButton > button[kind="primary"]:hover { background: #2ea043; }
 
-      #MainMenu, footer, header { visibility: hidden; }
+      /* Keep Streamlit's header visible so the collapsed-sidebar toggle remains usable. */
+      #MainMenu, footer { visibility: hidden; }
       hr { border-color: #21262d; }
 
       /* Suppress the 1px gap from the Ctrl+Enter JS component */
