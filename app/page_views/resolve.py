@@ -15,64 +15,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.formatter import format_as_terraform, format_results_summary
 from app.matcher import MatchResult, match_titles_bulk
-from app.role_loader import clear_all_caches, refresh_roles_from_api
 from app.supersession import check_supersessions
 
 
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
-    """Render the Resolve Titles page (sidebar controls + main panel)."""
-
-    # --- Sidebar: data source + refresh controls ---
-    st.sidebar.divider()
-
-    st.sidebar.markdown(
-        "<div class='section-label'>Data Source</div>",
-        unsafe_allow_html=True,
-    )
-
-    if st.session_state.get("roles_load_error"):
-        st.sidebar.error(st.session_state["roles_load_error"])
-    else:
-        st.sidebar.success(f"✓ {len(roles)} roles loaded")
-
-    if permissions:
-        st.sidebar.success(
-            f"✓ Permissions loaded for {len(permissions)} roles"
-        )
-    else:
-        st.sidebar.warning(
-            "⚠️ role_permissions.json not found. "
-            "Supersession checking disabled. "
-            "Run `refresh_roles.sh` to enable it."
-        )
-
-    st.sidebar.divider()
-
-    st.sidebar.markdown(
-        "<div class='section-label'>Live Refresh</div>",
-        unsafe_allow_html=True,
-    )
-    st.sidebar.caption(
-        "Requires GCP credentials via ADC. "
-        "Service account needs `roles/iam.roleViewer`."
-    )
-
-    if st.sidebar.button("↻ Refresh from GCP API", use_container_width=True):
-        with st.spinner("Calling GCP IAM API…"):
-            success, msg = refresh_roles_from_api()
-        if success:
-            st.sidebar.success(msg)
-            clear_all_caches()
-            st.rerun()
-        else:
-            st.sidebar.error(msg)
-
-    st.sidebar.divider()
-    st.sidebar.caption(
-        "💡 Match thresholds: ≥85% High · 60–84% Medium · <60% Low\n\n"
-        "⛔ Superseded = another role in your batch fully contains "
-        "this role's permissions."
-    )
+    """Render the Resolve Titles page."""
 
     # --- Main panel ---
     if st.session_state.get("roles_load_error"):

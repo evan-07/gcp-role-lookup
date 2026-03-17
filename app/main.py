@@ -14,7 +14,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.role_loader import load_roles, load_permissions
+from app.role_loader import load_roles, load_permissions, clear_all_caches, refresh_roles_from_api
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -230,6 +230,48 @@ with st.sidebar:
     ):
         st.session_state["page"] = "find_role"
         st.rerun()
+
+    st.divider()
+
+    st.markdown(
+        "<div class='section-label'>Data Source</div>",
+        unsafe_allow_html=True,
+    )
+
+    if st.session_state.get("roles_load_error"):
+        st.error(st.session_state["roles_load_error"])
+    else:
+        st.success(f"✓ {len(roles_data)} roles loaded")
+
+    if permissions_data:
+        st.success(f"✓ Permissions loaded for {len(permissions_data)} roles")
+    else:
+        st.warning(
+            "⚠️ role_permissions.json not found. "
+            "Supersession checking disabled. "
+            "Run `refresh_roles.sh` to enable it."
+        )
+
+    st.divider()
+
+    st.markdown(
+        "<div class='section-label'>Live Refresh</div>",
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "Requires GCP credentials via ADC. "
+        "Service account needs `roles/iam.roleViewer`."
+    )
+
+    if st.button("↻ Refresh from GCP API", use_container_width=True):
+        with st.spinner("Calling GCP IAM API…"):
+            success, msg = refresh_roles_from_api()
+        if success:
+            st.success(msg)
+            clear_all_caches()
+            st.rerun()
+        else:
+            st.error(msg)
 
 # ---------------------------------------------------------------------------
 # Dispatch to active page
