@@ -45,6 +45,19 @@ def _render_grouped(perms: set[str]) -> None:
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Role Inspector page."""
 
+    st.markdown(
+        """
+        <div class="app-header">
+          <div>
+            <h1>Role Inspector</h1>
+            <p>Browse the full permission set of any GCP role, grouped by service.
+            Enable "Compare two roles" to see a side-by-side diff of what each role adds or shares.</p>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # Global unavailability guard — runs before any role-specific lookup
     if not permissions:
         st.warning(

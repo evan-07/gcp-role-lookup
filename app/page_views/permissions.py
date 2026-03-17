@@ -58,6 +58,19 @@ def find_partial_matches(
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Permission Search page."""
 
+    st.markdown(
+        """
+        <div class="app-header">
+          <div>
+            <h1>Permission Search</h1>
+            <p>Find which GCP roles grant a specific IAM permission.
+            Returns exact matches (roles that include it) and partial matches (permissions containing your query as a substring).</p>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # Global unavailability guard — runs before empty-query check
     if not permissions:
         st.warning(

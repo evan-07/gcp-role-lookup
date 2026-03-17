@@ -81,6 +81,19 @@ def find_smallest_roles(
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Find Smallest Role page."""
 
+    st.markdown(
+        """
+        <div class="app-header">
+          <div>
+            <h1>Find Smallest Role</h1>
+            <p>Enter the permissions your workload needs and find the least-privilege GCP role that covers all of them.
+            When no single role qualifies, the top partial matches are shown ranked by coverage.</p>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     if not permissions:
         st.warning(
             "Permission data is not loaded. "

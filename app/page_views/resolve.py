@@ -86,11 +86,9 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
         """
         <div class="app-header">
           <div>
-            <h1>🔐 GCP Role Lookup</h1>
-            <p>
-              Resolve GCP IAM role titles to role IDs ·
-              Supersession detection · Terraform HCL output
-            </p>
+            <h1>Resolve Titles</h1>
+            <p>Paste GCP role titles to look up their canonical role IDs.
+            Includes fuzzy matching, supersession detection, and Terraform HCL or JSON output.</p>
           </div>
         </div>
         """,
