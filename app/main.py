@@ -115,6 +115,9 @@ st.markdown(
 
       #MainMenu, footer, header { visibility: hidden; }
       hr { border-color: #21262d; }
+
+      /* Suppress the 1px gap from the Ctrl+Enter JS component */
+      .stCustomComponentV1 { line-height: 0; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -135,7 +138,7 @@ st.components.v1.html(
       });
     </script>
     """,
-    height=0,
+    height=1,
 )
 
 # ---------------------------------------------------------------------------
