@@ -65,27 +65,42 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
 
     col_input, col_output = st.columns([1, 2], gap="large")
 
+    role_options = [""] + sorted(role_title_map.keys())
+
+    def _fmt(rid: str) -> str:
+        return "Select a role..." if rid == "" else f"{rid} — {role_title_map.get(rid, rid)}"
+
+    # Guard against stale session state values not present in current options
+    # Use .get() to avoid KeyError on first page load before Streamlit sets the key
+    if st.session_state.get("inspect_role_a", "") not in role_options:
+        st.session_state["inspect_role_a"] = ""
+    if st.session_state.get("inspect_role_b", "") not in role_options:
+        st.session_state["inspect_role_b"] = ""
+
     with col_input:
         st.markdown(
             "<div class='section-label'>Role ID</div>",
             unsafe_allow_html=True,
         )
-        st.text_input(
-            "Role A ID",
+        st.selectbox(
+            "Role A",
+            role_options,
+            format_func=_fmt,
             key="inspect_role_a",
             label_visibility="collapsed",
-            placeholder="e.g. roles/bigquery.dataEditor",
         )
         st.checkbox("Compare two roles", key="inspect_diff_mode")
         if st.session_state["inspect_diff_mode"]:
-            st.text_input(
-                "Role B ID",
+            st.selectbox(
+                "Role B",
+                role_options,
+                format_func=_fmt,
                 key="inspect_role_b",
-                placeholder="e.g. roles/bigquery.dataViewer",
+                label_visibility="collapsed",
             )
 
     with col_output:
-        role_a_id = st.session_state["inspect_role_a"].strip()
+        role_a_id = st.session_state["inspect_role_a"]
         diff_mode = st.session_state["inspect_diff_mode"]
 
         # No Role A input — nothing to show
@@ -121,7 +136,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             return
 
         # Diff mode — Role B evaluation
-        role_b_id = st.session_state["inspect_role_b"].strip()
+        role_b_id = st.session_state["inspect_role_b"]
 
         if not role_b_id:
             # Diff on but Role B empty — show Role A only
