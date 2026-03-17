@@ -6,7 +6,7 @@ Improve the Role Inspector page with two UX enhancements: searchable role ID sel
 
 ## Scope
 
-All changes are isolated to `app/page_views/inspect.py`. No other files are modified.
+Changes are confined to `app/page_views/inspect.py` and `tests/test_inspect_logic.py`.
 
 ---
 
@@ -18,23 +18,34 @@ Role A and Role B inputs are `st.text_input` fields. Users must type an exact ro
 
 ### New Behavior
 
-Both inputs are replaced with `st.selectbox`. The selectbox:
+Both inputs are replaced with `st.selectbox`. Implementation details:
 
-- First option is a blank sentinel (`""`) representing no selection — page starts in this state
-- Remaining options are all role IDs from the loaded `roles` data, sorted alphabetically
-- Each option displayed as `"roles/bigquery.dataEditor — BigQuery Data Editor"` so users can search by ID or title
-- On selection, the stored value in session state is the role ID only (not the display string)
-- Streamlit's built-in selectbox search filters options as the user types
+- Options list contains bare role IDs — first option is `""` (blank sentinel, no selection), remaining options are all role IDs from `roles` data sorted alphabetically
+- Display uses `format_func` to render each option as `"roles/bigquery.dataEditor — BigQuery Data Editor"` without storing the display string:
+
+```python
+role_title_map = {r["name"]: r["title"] for r in roles}
+options = [""] + sorted(role_title_map.keys())
+
+def _fmt(rid: str) -> str:
+    return rid if rid == "" else f"{rid} — {role_title_map.get(rid, rid)}"
+
+st.selectbox("Role A", options, format_func=_fmt, key="inspect_role_a")
+```
+
+- Because `format_func` is used, `st.session_state["inspect_role_a"]` stores the raw role ID (or `""`) — not the display string
+- `label_visibility="collapsed"` is set on both selectboxes (matching the existing `section-label` div pattern used for the text inputs they replace)
+- Streamlit's built-in selectbox search filters by the formatted display string as the user types
 
 ### Session State
 
-`st.session_state["inspect_role_a"]` and `st.session_state["inspect_role_b"]` continue to hold role ID strings (or `""` for no selection). The selectbox `index` is derived from the current session state value on each render.
+`st.session_state["inspect_role_a"]` and `st.session_state["inspect_role_b"]` continue to hold role ID strings (or `""` for no selection). The existing `.strip()` call on the retrieved value can be removed since a selectbox value is never user-typed.
 
 ### Edge Cases
 
-- If `roles` data is empty (load error), selectbox shows only the blank option and existing error guard triggers
-- Role B selectbox only shown when diff mode is enabled (unchanged from current behavior)
-- If a session state value is a role ID not present in the current options list (e.g. stale state after data refresh), default to index 0 (blank)
+- If `roles` data is empty (load error), selectbox shows only the blank option and the existing error guard triggers before any lookup
+- Role B selectbox is only shown when diff mode is enabled (unchanged from current behavior)
+- If a session state value is a role ID not present in the current options list (e.g. stale state after a data refresh), default to index 0 (blank sentinel)
 
 ---
 
@@ -72,7 +83,7 @@ Rules:
 
 ## Data Flow
 
-No new data loading. The `permissions: dict[str, set[str]]` passed into `render()` is the same source. Grouping is a pure transformation applied at render time:
+No new data loading. The `permissions: dict[str, set[str]]` passed into `render()` is the same source. Grouping is a pure transformation applied at render time via a module-level helper:
 
 ```python
 from collections import defaultdict
@@ -87,21 +98,30 @@ def group_permissions(perms: set[str]) -> dict[str, list[str]]:
     return dict(sorted(groups.items(), key=lambda x: (x[0] == "other", x[0])))
 ```
 
-This helper lives inside `inspect.py` (module level, not inside `render()`), making it independently testable.
+Lives at module level in `inspect.py` (not inside `render()`), making it independently testable.
 
 ---
 
 ## Testing
 
-New unit tests in `tests/test_inspect_logic.py`:
+New unit tests added to `tests/test_inspect_logic.py`. Import:
+
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from app.page_views.inspect import group_permissions
+```
+
+Tests:
 
 - `test_group_permissions_basic` — single service, multiple permissions
-- `test_group_permissions_multiple_services` — sorted alphabetically
-- `test_group_permissions_no_dot` — permissions without `.` go to `"other"` group, last
+- `test_group_permissions_multiple_services` — groups sorted alphabetically
+- `test_group_permissions_no_dot` — permissions without `.` go to `"other"` group
 - `test_group_permissions_other_is_last` — `"other"` sorts after named services
 - `test_group_permissions_empty` — empty set returns empty dict
 
-Selectbox logic has no pure-function equivalent to test directly (Streamlit widget). Covered by visual inspection during manual testing.
+Selectbox logic (Streamlit widget) is not unit-tested; covered by visual inspection.
 
 ---
 
@@ -109,5 +129,5 @@ Selectbox logic has no pure-function equivalent to test directly (Streamlit widg
 
 | File | Change |
 |------|--------|
-| `app/page_views/inspect.py` | Replace text inputs with selectbox; replace flat permission code blocks with grouped expanders; add `group_permissions()` helper |
+| `app/page_views/inspect.py` | Replace text inputs with selectbox + `format_func`; replace flat permission code blocks with grouped expanders; add `group_permissions()` helper |
 | `tests/test_inspect_logic.py` | Add 5 tests for `group_permissions()` |
