@@ -6,13 +6,9 @@ Handles page config, global CSS, session state init, data loading,
 sidebar navigation, and dispatch to active page modules.
 """
 
-import sys
 import logging
-from pathlib import Path
 
 import streamlit as st
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.role_loader import load_roles, load_permissions, clear_all_caches, refresh_roles_from_api
 
@@ -277,14 +273,14 @@ with st.sidebar:
 # Dispatch to active page
 # ---------------------------------------------------------------------------
 if st.session_state["page"] == "resolve":
-    from page_views.resolve import render as render_resolve
+    from app.page_views.resolve import render as render_resolve
     render_resolve(roles_data, permissions_data)
 elif st.session_state["page"] == "inspect":
-    from page_views.inspect import render as render_inspect
+    from app.page_views.inspect import render as render_inspect
     render_inspect(roles_data, permissions_data)
 elif st.session_state["page"] == "permissions":
-    from page_views.permissions import render as render_permissions
+    from app.page_views.permissions import render as render_permissions
     render_permissions(roles_data, permissions_data)
 elif st.session_state["page"] == "find_role":
-    from page_views.find_role import render as render_find_role
+    from app.page_views.find_role import render as render_find_role
     render_find_role(roles_data, permissions_data)
