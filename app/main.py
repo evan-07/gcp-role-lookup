@@ -136,6 +136,7 @@ _DEFAULTS: dict = {
     "inspect_role_b": "",
     "inspect_diff_mode": False,
     "permission_search_query": "",
+    "resolve_output_format": "HCL",
     "roles_load_error": None,
 }
 for _key, _val in _DEFAULTS.items():
