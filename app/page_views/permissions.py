@@ -5,12 +5,7 @@ Permission Search page — given an exact GCP permission string,
 finds every role that grants it and displays a Terraform-ready list.
 """
 
-import sys
-from pathlib import Path
-
 import streamlit as st
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
 def sort_key(role_id: str) -> tuple:

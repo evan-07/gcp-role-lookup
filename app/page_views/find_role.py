@@ -6,12 +6,7 @@ finds the role(s) that grant all of them with the fewest extra permissions.
 Falls back to top partial matches when no exact match exists.
 """
 
-import sys
-from pathlib import Path
-
 import streamlit as st
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
 def parse_permissions_input(raw: str) -> set[str]:

@@ -5,13 +5,8 @@ Resolve Titles page — matches GCP role titles to role IDs,
 shows Terraform HCL output, supersession detection, and review table.
 """
 
-import sys
-from pathlib import Path
-
 import pandas as pd
 import streamlit as st
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.formatter import format_as_terraform, format_results_summary
 from app.matcher import MatchResult, match_titles_bulk

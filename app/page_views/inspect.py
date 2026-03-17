@@ -5,11 +5,7 @@ Role Inspector page — given a GCP role ID, shows its title and full
 permission list. Optionally diffs two roles side-by-side.
 """
 
-import sys
 from collections import defaultdict
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import streamlit as st
 
