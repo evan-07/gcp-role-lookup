@@ -16,7 +16,7 @@ Add a new "Find Smallest Role" page that accepts a list of required GCP permissi
 
 ### Input
 
-A `st.text_area` (one permission per line) with a "Find Role →" button. Session state key: `find_role_input` (str, default `""`). Input is trimmed and lowercased; blank lines and duplicates are discarded before searching.
+A `st.text_area` (one permission per line) with a "Find Role →" button. Session state key: `find_role_input` (str, default `""`). Input is parsed by the module-level `parse_permissions_input()` function (see below) before searching.
 
 ### Unavailability guard
 
@@ -55,6 +55,21 @@ If both sections are empty (no role grants even one required permission):
 
 If the text area is empty or contains no valid permission strings after parsing:
 Return without rendering results (same pattern as other search pages).
+
+---
+
+## Pure Function: parse_permissions_input()
+
+Lives at module level in `find_role.py`.
+
+```python
+def parse_permissions_input(raw: str) -> set[str]:
+    """Parse raw text area input into a set of lowercased permission strings.
+
+    Strips whitespace, lowercases, discards blank lines and duplicates.
+    """
+    return {line.strip().lower() for line in raw.splitlines() if line.strip()}
+```
 
 ---
 
@@ -115,12 +130,12 @@ def find_smallest_roles(required, permissions, role_title_map, partial_limit=10)
         else:
             partial.append(entry)
 
-    exact.sort(key=lambda x: (_tier(x["role_id"]), x["total_perms"]))
+    exact.sort(key=lambda x: (_tier(x["role_id"]), x["total_perms"], x["role_id"]))
 
     if exact:
         return exact, []
 
-    partial.sort(key=lambda x: (-x["covered"], _tier(x["role_id"]), x["total_perms"]))
+    partial.sort(key=lambda x: (-x["covered"], _tier(x["role_id"]), x["total_perms"], x["role_id"]))
     return [], partial[:partial_limit]
 ```
 
@@ -130,14 +145,13 @@ Note: `partial` is only returned when `exact` is empty (spec requirement C — s
 
 ## Session State
 
-Two new keys added to `_DEFAULTS` in `app/main.py`:
+One new key added to `_DEFAULTS` in `app/main.py`:
 
 ```python
 "find_role_input": "",
-"find_role_results_pending": False,   # True after Find button clicked
 ```
 
-Actually, results are computed inline on button click (same pattern as Resolve Titles) — no `results_pending` key needed. Only `find_role_input` is added.
+Results are computed inline on button click (same pattern as Resolve Titles). No additional state keys needed.
 
 ---
 
@@ -161,6 +175,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "app"))
 ```
 
+Tests for `parse_permissions_input()`:
+- `test_parse_trims_whitespace` — `"  a.b.c  "` → `{"a.b.c"}`
+- `test_parse_lowercases` — `"BigQuery.Tables.Get"` → `{"bigquery.tables.get"}`
+- `test_parse_discards_blank_lines` — `"a.b\n\n\nc.d"` → `{"a.b", "c.d"}`
+- `test_parse_deduplicates` — `"a.b\na.b"` → `{"a.b"}`
+
 Tests for `_tier()`:
 - `test_tier_predefined` — `roles/x` → 0
 - `test_tier_project` — `projects/x` → 1
@@ -169,13 +189,13 @@ Tests for `_tier()`:
 
 Tests for `find_smallest_roles()`:
 - `test_exact_match_found` — one role grants all required perms, appears in exact list
-- `test_exact_match_sorted_by_size` — two exact matches, smaller total_perms first
-- `test_exact_match_tier_before_size` — predefined role ranked before project role even if project role is smaller
-- `test_no_exact_returns_partial` — no exact match, partial list returned sorted by coverage
+- `test_exact_match_sorted_by_size` — two exact-match roles both in `roles/` tier, smaller total_perms ranks first
+- `test_exact_match_tier_before_size` — predefined role (`roles/`) ranked before project role (`projects/`) even if project role has fewer total permissions
+- `test_no_exact_returns_partial` — no exact match, partial list returned sorted by coverage count descending
 - `test_partial_limit` — more than 10 partial matches, only top 10 returned
 - `test_empty_required` — empty required set returns ([], [])
 - `test_no_coverage` — no role covers any required permission, both lists empty
-- `test_exact_suppresses_partial` — when exact matches exist, partial list is empty
+- `test_exact_suppresses_partial` — when exact matches exist, partial list is always empty
 
 ---
 
@@ -183,6 +203,6 @@ Tests for `find_smallest_roles()`:
 
 | File | Change |
 |------|--------|
-| `app/page_views/find_role.py` | New: `_tier()`, `find_smallest_roles()`, `render()` |
-| `tests/test_find_role_logic.py` | New: 12 unit tests |
+| `app/page_views/find_role.py` | New: `parse_permissions_input()`, `_tier()`, `find_smallest_roles()`, `render()` |
+| `tests/test_find_role_logic.py` | New: 16 unit tests (4 parse + 4 tier + 8 find_smallest_roles) |
 | `app/main.py` | Add `find_role_input` to `_DEFAULTS`; add nav button; add dispatch |
