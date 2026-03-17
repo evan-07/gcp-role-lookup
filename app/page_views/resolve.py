@@ -133,15 +133,20 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
 
         if clear_clicked:
             st.session_state["resolve_input"] = ""
+            st.session_state["resolve_results"] = None
             st.rerun()
 
     # Compute results before col_output so they're accessible for the
     # full-width review table rendered outside the columns block.
-    results: list[MatchResult] | None = None
+    # Results are stored in session state so the format toggle rerun
+    # doesn't lose them.
     if resolve_clicked and input_text.strip() and roles:
         results = match_titles_bulk(input_text, roles)
         if permissions:
             check_supersessions(results, permissions, roles)
+        st.session_state["resolve_results"] = results
+    else:
+        results = st.session_state.get("resolve_results")
 
     with col_output:
         fmt = st.session_state.get("resolve_output_format", "HCL")

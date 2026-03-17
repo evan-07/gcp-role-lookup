@@ -138,6 +138,7 @@ _DEFAULTS: dict = {
     "permission_search_query": "",
     "resolve_output_format": "HCL",
     "find_role_input": "",
+    "resolve_results": None,
     "roles_load_error": None,
 }
 for _key, _val in _DEFAULTS.items():
