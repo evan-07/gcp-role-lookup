@@ -144,14 +144,15 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             check_supersessions(results, permissions, roles)
 
     with col_output:
+        fmt = st.session_state.get("resolve_output_format", "HCL")
+        label = "Terraform HCL Output" if fmt == "HCL" else "JSON Role Array"
         st.markdown(
-            "<div class='section-label'>Terraform HCL Output</div>",
+            f"<div class='section-label'>{label}</div>",
             unsafe_allow_html=True,
         )
 
         if results is not None:
             summary = format_results_summary(results)
-            hcl_output = format_as_terraform(results)
 
             total = sum(v for k, v in summary.items() if k != "empty")
             fuzzy = summary["high"] + summary["medium"]
@@ -170,7 +171,21 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
                 unsafe_allow_html=True,
             )
 
-            st.code(hcl_output, language="hcl")
+            st.radio(
+                "Output format",
+                ["HCL", "JSON"],
+                horizontal=True,
+                key="resolve_output_format",
+                label_visibility="collapsed",
+            )
+
+            if fmt == "HCL":
+                hcl_output = format_as_terraform(results)
+                st.code(hcl_output, language="hcl")
+            else:
+                import json
+                role_ids = [r.role_id for r in results if r.role_id is not None]
+                st.code(json.dumps(role_ids, indent=2), language="json")
 
         elif resolve_clicked and not roles:
             st.error(
