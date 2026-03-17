@@ -1,10 +1,5 @@
 """Tests for Role Inspector diff logic edge cases."""
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 
 def test_diff_only_in_a():
     perms_a = {"a.b.c", "d.e.f", "g.h.i"}

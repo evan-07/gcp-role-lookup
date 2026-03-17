@@ -1,8 +1,4 @@
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def test_clear_all_caches_calls_st_cache_data_clear():
