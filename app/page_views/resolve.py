@@ -55,6 +55,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             ),
             label_visibility="collapsed",
             key="resolve_input",
+            height=300,
         )
 
         col_btn1, col_btn2 = st.columns([1, 1])

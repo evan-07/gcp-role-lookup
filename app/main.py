@@ -9,6 +9,7 @@ sidebar navigation, and dispatch to active page modules.
 import logging
 
 import streamlit as st
+import streamlit.components.v1
 
 from app.role_loader import load_roles, load_permissions, clear_all_caches, refresh_roles_from_api
 
@@ -67,14 +68,12 @@ st.markdown(
       .badge-total      { background:#161b22; color:#8b949e; border:1px solid #30363d; }
       .badge-superseded { background:#1a0d2b; color:#bc8cff; border:1px solid #6e40c9; }
 
-      /* Viewport-fill textarea */
       .stTextArea textarea {
         background: #161b22 !important; color: #e6edf3 !important;
         border: 1px solid #30363d !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-size: 0.83rem !important; border-radius: 6px !important;
-        height: calc(100vh - 260px) !important;
-        min-height: 400px !important; resize: none !important;
+        resize: vertical !important;
       }
       .stTextArea textarea:focus {
         border-color: #388bfd !important;
@@ -83,8 +82,7 @@ st.markdown(
 
       .hcl-placeholder {
         background: #161b22; border: 1px solid #30363d;
-        border-radius: 6px; height: calc(100vh - 260px);
-        min-height: 400px; display: flex;
+        border-radius: 6px; min-height: 300px; display: flex;
         align-items: center; justify-content: center;
         color: #484f58; font-family: 'JetBrains Mono', monospace;
         font-size: 0.82rem;
@@ -120,6 +118,24 @@ st.markdown(
     </style>
     """,
     unsafe_allow_html=True,
+)
+
+# ---------------------------------------------------------------------------
+# Ctrl+Enter → click active primary button
+# ---------------------------------------------------------------------------
+st.components.v1.html(
+    """
+    <script>
+      const doc = window.parent.document;
+      doc.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          const btn = doc.querySelector('button[kind="primary"]:not([disabled])');
+          if (btn) btn.click();
+        }
+      });
+    </script>
+    """,
+    height=0,
 )
 
 # ---------------------------------------------------------------------------

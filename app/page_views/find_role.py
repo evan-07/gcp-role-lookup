@@ -107,6 +107,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
         placeholder="bigquery.tables.create\nbigquery.tables.delete\nbigquery.datasets.get",
         label_visibility="collapsed",
         key="find_role_input",
+        height=300,
     )
 
     find_clicked = st.button("Find Role →", type="primary")
