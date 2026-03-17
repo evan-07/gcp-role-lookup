@@ -173,6 +173,7 @@ def refresh_roles_from_api(
             "iam", "v1", credentials=credentials
         )
         roles = []
+        perms_dict: dict[str, list[str]] = {}
         request = service.roles().list(view="FULL")
         while request is not None:
             response = request.execute()
@@ -186,6 +187,10 @@ def refresh_roles_from_api(
                             "name": name,
                         }
                     )
+                if name:
+                    perms_dict[name] = sorted(
+                        role.get("includedPermissions", [])
+                    )
             request = service.roles().list_next(
                 previous_request=request,
                 previous_response=response,
@@ -195,10 +200,14 @@ def refresh_roles_from_api(
         with open(DATA_PATH, "w", encoding="utf-8") as f:
             json.dump(roles, f, indent=2)
 
+        perms_dict_sorted = {k: perms_dict[k] for k in sorted(perms_dict)}
+        with open(PERMISSIONS_PATH, "w", encoding="utf-8") as f:
+            json.dump(perms_dict_sorted, f, indent=2)
+
         logger.info(
             "Refreshed %d roles from GCP IAM API.", len(roles)
         )
-        return True, f"Successfully refreshed {len(roles)} roles."
+        return True, f"Successfully refreshed {len(roles)} roles and permissions."
 
     except Exception as exc:  # noqa: BLE001
         return (

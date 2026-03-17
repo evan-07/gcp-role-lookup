@@ -249,7 +249,7 @@ with st.sidebar:
         st.warning(
             "⚠️ role_permissions.json not found. "
             "Supersession checking disabled. "
-            "Run `refresh_roles.sh` to enable it."
+            "Run `python scripts/refresh_roles.py` to enable it."
         )
 
     st.divider()

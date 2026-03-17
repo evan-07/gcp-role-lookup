@@ -1,11 +1,10 @@
 # Purpose: Align dependencies to resolve Streamlit and Pandas version conflicts
 # Usage: pip install -r requirements.txt
-# Version: 1.4
-# Last Modified: 2026-03-06
+# Version: 1.5
+# Last Modified: 2026-03-17
 streamlit==1.55.0
 rapidfuzz==3.9.3
 google-api-python-client==2.131.0
 google-auth==2.29.0
 pandas==2.3.3
 numpy==2.4.2
-pytest==8.3.4

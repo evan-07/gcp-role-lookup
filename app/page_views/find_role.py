@@ -97,7 +97,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     if not permissions:
         st.warning(
             "Permission data is not loaded. "
-            "Please use the Refresh button on the Resolve Titles page."
+            "Please use the Refresh button in the sidebar."
         )
         return
 

@@ -324,6 +324,14 @@ If `role_permissions.json` is missing, supersession checks are skipped and the a
 
 ## Running Tests
 
+Install dev dependencies first (includes pytest):
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Then run:
+
 ```bash
 # Windows
 .venv\Scripts\python -m pytest tests/ -v
