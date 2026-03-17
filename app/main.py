@@ -26,6 +26,11 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+if "theme_mode" not in st.session_state:
+    st.session_state["theme_mode"] = "Dark"
+
+is_dark_mode = st.session_state["theme_mode"] == "Dark"
+
 # ---------------------------------------------------------------------------
 # Global CSS
 # ---------------------------------------------------------------------------
@@ -124,6 +129,25 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+if not is_dark_mode:
+    st.markdown(
+        """
+        <style>
+          .stApp { background: #f6f8fa; color: #1f2328; }
+          .app-header { border-bottom-color: #d0d7de; }
+          .app-header h1 { color: #1f2328; }
+          .app-header p, .section-label { color: #59636e; }
+          [data-testid="stSidebar"] { background: #ffffff !important; border-right-color: #d0d7de; }
+          .stTextArea textarea { background: #ffffff !important; color: #1f2328 !important; border-color: #d0d7de !important; }
+          .hcl-placeholder, .badge-total { background: #ffffff; color: #59636e; border-color: #d0d7de; }
+          .stButton > button { background: #f6f8fa; color: #1f2328; border-color: #d0d7de; }
+          .stButton > button:hover { background: #eaeef2; border-color: #8c959f; }
+          hr { border-color: #d0d7de; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 # ---------------------------------------------------------------------------
 # Ctrl+Enter → click active primary button
 # ---------------------------------------------------------------------------
@@ -161,6 +185,7 @@ _DEFAULTS: dict = {
     "find_role_input": "",
     "resolve_results": None,
     "roles_load_error": None,
+    "theme_mode": "Dark",
 }
 for _key, _val in _DEFAULTS.items():
     if _key not in st.session_state:
@@ -203,14 +228,27 @@ except Exception as exc:  # noqa: BLE001
 # Sidebar: brand header + nav buttons
 # ---------------------------------------------------------------------------
 with st.sidebar:
+    light_mode_enabled = st.toggle(
+        "Light mode",
+        value=not is_dark_mode,
+        help="Dark mode is default. Toggle on to use light mode.",
+    )
+    chosen_theme = "Light" if light_mode_enabled else "Dark"
+    if chosen_theme != st.session_state["theme_mode"]:
+        st.session_state["theme_mode"] = chosen_theme
+        st.rerun()
+
+    title_color = "#e6edf3" if is_dark_mode else "#1f2328"
+    subtitle_color = "#7d8590" if is_dark_mode else "#59636e"
+
     st.markdown(
-        "<div style='font-family:Inter;font-weight:800;"
-        "font-size:1.1rem;color:#e6edf3;margin-bottom:0.25rem'>"
+        f"<div style='font-family:Inter;font-weight:800;"
+        f"font-size:1.1rem;color:{title_color};margin-bottom:0.25rem'>"
         "🔐 GCP Role Lookup</div>",
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<div style='font-size:0.75rem;color:#7d8590;"
+        f"<div style='font-size:0.75rem;color:{subtitle_color};"
         "margin-bottom:1.25rem'>"
         "IAM Role Title → Role ID Resolver</div>",
         unsafe_allow_html=True,
