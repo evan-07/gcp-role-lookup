@@ -79,3 +79,75 @@ def test_search_case_insensitive_stored_permissions():
         if query in {p.lower() for p in perms}
     ]
     assert matches == ["roles/viewer"]
+
+
+def test_find_exact_matches_hit():
+    from page_views.permissions import find_exact_matches
+    perms = {
+        "roles/bigquery.dataEditor": {"bigquery.tables.create", "bigquery.tables.delete"},
+        "roles/bigquery.dataViewer": {"bigquery.tables.get"},
+    }
+    assert find_exact_matches("bigquery.tables.create", perms) == ["roles/bigquery.dataEditor"]
+
+
+def test_find_exact_matches_miss():
+    from page_views.permissions import find_exact_matches
+    perms = {"roles/viewer": {"resourcemanager.projects.get"}}
+    assert find_exact_matches("nonexistent.permission", perms) == []
+
+
+def test_find_exact_matches_case_insensitive():
+    from page_views.permissions import find_exact_matches
+    perms = {"roles/viewer": {"BigQuery.Tables.Get"}}
+    assert find_exact_matches("bigquery.tables.get", perms) == ["roles/viewer"]
+
+
+def test_find_partial_matches_substring():
+    from page_views.permissions import find_partial_matches
+    perms = {
+        "roles/a": {"bigquery.tables.create", "bigquery.tables.delete"},
+        "roles/b": {"bigquery.tables.get"},
+    }
+    rows, total = find_partial_matches("bigquery", perms)
+    perm_names = [r[0] for r in rows]
+    assert "bigquery.tables.create" in perm_names
+    assert "bigquery.tables.delete" in perm_names
+    assert "bigquery.tables.get" in perm_names
+    assert total == 3
+
+
+def test_find_partial_matches_excludes_exact():
+    from page_views.permissions import find_partial_matches
+    perms = {"roles/a": {"bigquery.tables.create"}}
+    rows, total = find_partial_matches("bigquery.tables.create", perms)
+    assert rows == []
+    assert total == 0
+
+
+def test_find_partial_matches_sorted_by_role_count():
+    from page_views.permissions import find_partial_matches
+    perms = {
+        "roles/a": {"bigquery.tables.create", "bigquery.tables.get"},
+        "roles/b": {"bigquery.tables.create"},
+    }
+    rows, _ = find_partial_matches("bigquery", perms)
+    # bigquery.tables.create appears in 2 roles, bigquery.tables.get in 1
+    assert rows[0] == ("bigquery.tables.create", 2)
+    assert rows[1] == ("bigquery.tables.get", 1)
+
+
+def test_find_partial_matches_limit():
+    from page_views.permissions import find_partial_matches
+    # Build 5 distinct permissions all containing "svc"
+    perms = {"roles/x": {f"svc.resource.action{i}" for i in range(5)}}
+    rows, total = find_partial_matches("svc", perms, limit=3)
+    assert len(rows) == 3
+    assert total == 5
+
+
+def test_find_partial_matches_empty():
+    from page_views.permissions import find_partial_matches
+    perms = {"roles/viewer": {"resourcemanager.projects.get"}}
+    rows, total = find_partial_matches("zzznomatch", perms)
+    assert rows == []
+    assert total == 0

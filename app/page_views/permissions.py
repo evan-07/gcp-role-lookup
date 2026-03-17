@@ -24,6 +24,37 @@ def sort_key(role_id: str) -> tuple:
     return (3, role_id)
 
 
+def find_exact_matches(
+    query: str, permissions: dict[str, set[str]]
+) -> list[str]:
+    """Return sorted role IDs whose permission set contains query exactly (case-insensitive)."""
+    q = query.lower()
+    return sorted(
+        [rid for rid, perms in permissions.items() if q in {p.lower() for p in perms}],
+        key=sort_key,
+    )
+
+
+def find_partial_matches(
+    query: str, permissions: dict[str, set[str]], limit: int = 100
+) -> tuple[list[tuple[str, int]], int]:
+    """Return (rows, total_count) for permission strings containing query as substring.
+
+    Excludes exact match. Rows are (permission_string, role_count) sorted by
+    role_count descending then alphabetically, capped at limit.
+    All permission strings are lowercased (case variants merged).
+    """
+    q = query.lower()
+    counts: dict[str, int] = {}
+    for perms in permissions.values():
+        for p in perms:
+            pl = p.lower()
+            if q in pl and pl != q:
+                counts[pl] = counts.get(pl, 0) + 1
+    results = sorted(counts.items(), key=lambda x: (-x[1], x[0]))
+    return results[:limit], len(counts)
+
+
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Permission Search page."""
 
