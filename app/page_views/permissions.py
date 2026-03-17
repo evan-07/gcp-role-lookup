@@ -87,39 +87,57 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     if not query:
         return
 
-    role_title_map = {r["name"]: r["title"] for r in roles}
-
-    matches = sorted(
-        [
-            rid
-            for rid, perms in permissions.items()
-            if query in {p.lower() for p in perms}
-        ],
-        key=sort_key,
-    )
-
-    if not matches:
-        st.info(f"No roles found granting permission: {query}")
+    if len(query) < 3:
+        st.info("Enter at least 3 characters to search.")
         return
 
-    sorted_rows = [
-        {
-            "Role ID": rid,
-            "Role Title": role_title_map.get(rid, "(custom role)"),
-            "Terraform String": f'"{rid}"',
-        }
-        for rid in matches
-    ]
-    sorted_terraform_strings = [row["Terraform String"] for row in sorted_rows]
+    role_title_map = {r["name"]: r["title"] for r in roles}
+    exact_matches = find_exact_matches(query, permissions)
+    partial_rows, partial_total = find_partial_matches(query, permissions)
 
-    st.caption(f"{len(matches)} role(s) grant this permission.")
+    if not exact_matches and not partial_rows:
+        st.info(f"No permissions or roles found for: {query}")
+        return
 
     import pandas as pd
-    df = pd.DataFrame(sorted_rows)
-    st.dataframe(df, use_container_width=True, hide_index=True)
 
-    st.markdown(
-        "<div class='section-label'>Terraform Role Strings</div>",
-        unsafe_allow_html=True,
-    )
-    st.code("\n".join(sorted_terraform_strings), language=None)
+    # --- Exact Matches section ---
+    if exact_matches:
+        st.markdown(
+            "<div class='section-label'>Exact Matches</div>",
+            unsafe_allow_html=True,
+        )
+        st.caption(f"{len(exact_matches)} role(s) grant this permission exactly.")
+        exact_rows = [
+            {
+                "Role ID": rid,
+                "Role Title": role_title_map.get(rid, "(custom role)"),
+                "Terraform String": f'"{rid}"',
+            }
+            for rid in exact_matches
+        ]
+        df_exact = pd.DataFrame(exact_rows)
+        st.dataframe(df_exact, use_container_width=True, hide_index=True)
+        st.markdown(
+            "<div class='section-label'>Terraform Role Strings</div>",
+            unsafe_allow_html=True,
+        )
+        st.code("\n".join(row["Terraform String"] for row in exact_rows), language=None)
+
+    # --- Partial Matches section ---
+    if partial_rows:
+        st.markdown(
+            "<div class='section-label'>Partial Matches</div>",
+            unsafe_allow_html=True,
+        )
+        truncation_note = (
+            f" Showing first {len(partial_rows)} — refine your query to narrow results."
+            if partial_total > len(partial_rows) else ""
+        )
+        st.caption(
+            f"{partial_total} permission string(s) contain '{query}'.{truncation_note}"
+        )
+        df_partial = pd.DataFrame(
+            [{"Permission": perm, "# Roles": count} for perm, count in partial_rows]
+        )
+        st.dataframe(df_partial, use_container_width=True, hide_index=True)
