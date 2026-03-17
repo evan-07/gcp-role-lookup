@@ -132,8 +132,13 @@ st.components.v1.html(
       const doc = window.parent.document;
       doc.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-          const btn = doc.querySelector('button[kind="primary"]:not([disabled])');
-          if (btn) btn.click();
+          const candidates = doc.querySelectorAll('button[kind="primary"]:not([disabled])');
+          for (const btn of candidates) {
+            if (!btn.closest('[data-testid="stSidebar"]')) {
+              btn.click();
+              break;
+            }
+          }
         }
       });
     </script>
