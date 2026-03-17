@@ -224,11 +224,11 @@ with st.sidebar:
 # Dispatch to active page
 # ---------------------------------------------------------------------------
 if st.session_state["page"] == "resolve":
-    from pages.resolve import render as render_resolve
+    from page_views.resolve import render as render_resolve
     render_resolve(roles_data, permissions_data)
 elif st.session_state["page"] == "inspect":
-    from pages.inspect import render as render_inspect
+    from page_views.inspect import render as render_inspect
     render_inspect(roles_data, permissions_data)
 elif st.session_state["page"] == "permissions":
-    from pages.permissions import render as render_permissions
+    from page_views.permissions import render as render_permissions
     render_permissions(roles_data, permissions_data)
