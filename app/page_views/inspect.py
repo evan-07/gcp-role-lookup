@@ -12,6 +12,23 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from collections import defaultdict
+
+
+def group_permissions(perms: set[str]) -> dict[str, list[str]]:
+    """Group permissions by service prefix (part before first dot).
+
+    Permissions with no dot go into 'other', which always sorts last.
+    Within each group, permissions are sorted alphabetically.
+    """
+    groups: dict[str, list[str]] = defaultdict(list)
+    for p in perms:
+        service = p.split(".")[0] if "." in p else "other"
+        groups[service].append(p)
+    for service in groups:
+        groups[service].sort()
+    return dict(sorted(groups.items(), key=lambda x: (x[0] == "other", x[0])))
+
 
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Role Inspector page."""

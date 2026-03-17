@@ -35,3 +35,36 @@ def test_nonempty_diff_column_sorts_alphabetically():
     perms = {"z.a.b", "a.b.c", "m.n.o"}
     result = "\n".join(sorted(perms))
     assert result == "a.b.c\nm.n.o\nz.a.b"
+
+
+def test_group_permissions_basic():
+    from app.page_views.inspect import group_permissions
+    result = group_permissions({"bigquery.tables.create", "bigquery.tables.delete"})
+    assert result == {"bigquery": ["bigquery.tables.create", "bigquery.tables.delete"]}
+
+
+def test_group_permissions_multiple_services():
+    from app.page_views.inspect import group_permissions
+    result = group_permissions({"bigquery.tables.get", "compute.instances.list"})
+    assert list(result.keys()) == ["bigquery", "compute"]
+
+
+def test_group_permissions_no_dot():
+    from app.page_views.inspect import group_permissions
+    result = group_permissions({"nodotpermission"})
+    assert "other" in result
+    assert result["other"] == ["nodotpermission"]
+
+
+def test_group_permissions_other_is_last():
+    from app.page_views.inspect import group_permissions
+    result = group_permissions({"nodot", "bigquery.tables.get", "compute.instances.list"})
+    keys = list(result.keys())
+    assert keys[-1] == "other"
+    assert keys[0] == "bigquery"
+    assert keys[1] == "compute"
+
+
+def test_group_permissions_empty():
+    from app.page_views.inspect import group_permissions
+    assert group_permissions(set()) == {}
