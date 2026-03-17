@@ -36,13 +36,17 @@ Write-Host ""
 Write-Host "=== GCP Role Lookup - Windows Setup Helper ===" -ForegroundColor Cyan
 Write-Host ""
 
-# Ask once, up front, whether ADC setup is desired (optional)
+# Ask once, up front, whether ADC setup is desired (optional, default: no)
 $setupAdcNow = $false
 if (-not $SkipGcloud) {
-    Write-Info "ADC login is optional (only needed for live role refresh)."
-    $adcResponse = Read-Host "Do you want to configure ADC now? (y/n)"
+    Write-Info "ADC login is optional — only needed if you want to refresh role data from the GCP API."
+    Write-Info "The app works offline with the bundled data files."
+    $adcResponse = Read-Host "Configure ADC now? (y/N)"
     if ($adcResponse -match '^(y|yes)$') {
         $setupAdcNow = $true
+    } else {
+        $SkipGcloud = $true
+        Write-Info "Skipping gcloud / ADC setup. Run 'gcloud auth application-default login' later if needed."
     }
 }
 

@@ -40,10 +40,14 @@ echo
 
 SETUP_ADC_NOW=false
 if [ "$SKIP_GCLOUD" = false ]; then
-  info "ADC login is optional (only needed for live role refresh)."
-  read -r -p "Do you want to configure ADC now? (y/n) " adc_response
+  info "ADC login is optional — only needed if you want to refresh role data from the GCP API."
+  info "The app works offline with the bundled data files."
+  read -r -p "Configure ADC now? (y/N) " adc_response
   if [[ "$adc_response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     SETUP_ADC_NOW=true
+  else
+    SKIP_GCLOUD=true
+    info "Skipping gcloud / ADC setup. Run 'gcloud auth application-default login' later if needed."
   fi
 fi
 

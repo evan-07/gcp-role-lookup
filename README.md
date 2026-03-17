@@ -152,7 +152,7 @@ From PowerShell in the repository root:
 .\setup_windows.ps1
 ```
 
-The script checks Python 3.12+, optionally checks `gcloud`, creates `.venv`, installs dependencies, and starts Streamlit.
+The script checks Python 3.12+, creates `.venv`, installs dependencies, and starts Streamlit. It will ask whether to configure ADC — the default is **no**, so just press Enter to skip and start the app immediately. ADC is only needed to refresh the bundled role data.
 
 If PowerShell blocks script execution:
 
@@ -188,6 +188,8 @@ App URL: http://localhost:8501
 chmod +x setup_linux.sh
 ./setup_linux.sh
 ```
+
+The script checks Python 3.12+, creates `.venv`, installs dependencies, and starts Streamlit. It will ask whether to configure ADC — the default is **no**, so just press Enter to skip and start the app immediately. ADC is only needed to refresh the bundled role data.
 
 Optional flags:
 
@@ -251,17 +253,45 @@ docker run --rm -p 8501:8501 `
 
 ## Refresh Role and Permission Data
 
-Updates both `data/gcp_roles.json` and `data/role_permissions.json` by calling the GCP IAM API.
+The app ships with bundled role data in `data/gcp_roles.json` and `data/role_permissions.json`. These files are sufficient for offline use. Refresh them when you want the latest GCP IAM roles.
+
+### Step 1 — Install gcloud CLI (if not already installed)
+
+Download and install from https://cloud.google.com/sdk/docs/install, then verify:
+
+```bash
+gcloud --version
+```
+
+### Step 2 — Authenticate with Application Default Credentials (ADC)
+
+```bash
+gcloud auth application-default login
+```
+
+This opens a browser window for Google sign-in. Your credentials are saved to:
+- **Windows:** `%APPDATA%\gcloud\application_default_credentials.json`
+- **Linux/macOS:** `~/.config/gcloud/application_default_credentials.json`
+
+The identity used must have permission to call the IAM roles API (`iam.roles.list`). The built-in role `roles/iam.roleViewer` is sufficient.
+
+Verify the active account afterwards:
+
+```bash
+gcloud auth list
+```
+
+### Step 3 — Run the refresh script
 
 ```bash
 # Windows
-python scripts/refresh_roles.py
+.venv\Scripts\python scripts/refresh_roles.py
 
 # Linux/macOS
-python3 scripts/refresh_roles.py
+.venv/bin/python scripts/refresh_roles.py
 ```
 
-Alternatively, use the **↻ Refresh from GCP API** button in the app sidebar (requires valid ADC credentials).
+This updates both `data/gcp_roles.json` and `data/role_permissions.json`. The app sidebar also has a **↻ Refresh from GCP API** button that runs the same refresh without leaving the browser.
 
 ---
 
