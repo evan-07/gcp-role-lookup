@@ -251,6 +251,14 @@ with st.sidebar:
         st.session_state["page"] = "find_role"
         st.rerun()
 
+    if st.button(
+        "Help",
+        type="primary" if page == "help" else "secondary",
+        use_container_width=True,
+    ):
+        st.session_state["page"] = "help"
+        st.rerun()
+
     st.divider()
 
     st.markdown(
@@ -308,3 +316,6 @@ elif st.session_state["page"] == "permissions":
 elif st.session_state["page"] == "find_role":
     from app.page_views.find_role import render as render_find_role
     render_find_role(roles_data, permissions_data)
+elif st.session_state["page"] == "help":
+    from app.page_views.help import render as render_help
+    render_help()
