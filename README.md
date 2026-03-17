@@ -1,19 +1,12 @@
 # GCP Role Lookup
 
-A Streamlit application that converts **human-readable GCP IAM role titles** (for example, `BigQuery Data Editor`) into canonical **role IDs** (for example, `roles/bigquery.dataEditor`) and renders Terraform-friendly output.
-
-The app supports:
-- Fuzzy matching for near matches
-- Review guidance when matches are ambiguous
-- Optional supersession detection using role permissions
-- Local/offline use with bundled role data
-- Live refresh from the IAM API when credentials are available
+A Streamlit application for working with GCP IAM roles. Convert human-readable role titles to canonical role IDs, explore role permissions, search by permission string, and find the least-privilege role for a given set of requirements.
 
 ---
 
 ## Table of Contents
 
-- [What This Tool Does](#what-this-tool-does)
+- [Pages](#pages)
 - [Repository Layout](#repository-layout)
 - [Prerequisites](#prerequisites)
 - [Authentication for Live Refresh](#authentication-for-live-refresh)
@@ -23,37 +16,43 @@ The app supports:
 - [Refresh Role and Permission Data](#refresh-role-and-permission-data)
 - [How Matching Works](#how-matching-works)
 - [Supersession Detection](#supersession-detection)
+- [Running Tests](#running-tests)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
-## What This Tool Does
+## Pages
 
-Input a list of role titles (one per line), then the app:
+### Resolve Titles
 
-1. Resolves each title to the best matching GCP role ID.
-2. Labels each match by confidence (exact/high/medium/low/not found).
-3. Produces Terraform HCL-style output suitable for IAM role lists.
-4. Optionally comments out roles that are superseded by broader roles in the same batch.
+Paste GCP role titles (one per line) to look up their canonical role IDs. The app uses fuzzy matching to handle near-matches and ambiguous titles.
 
-### Application Flow
+- **Output formats:** Terraform HCL block or a plain JSON array of role IDs, switchable via toggle
+- **Confidence labels:** Exact / High / Medium / Low / Not found
+- **Supersession detection:** Flags roles whose permissions are fully covered by another role in the same batch
+- **Review Required table:** Surfaces all fuzzy matches and superseded roles for human review
 
-```mermaid
-flowchart TD
-    A[User enters IAM role titles\none per line in Streamlit UI] --> B[Load role catalog\nlocal JSON cache]
-    B --> C{Live refresh enabled\nand credentials available?}
-    C -- Yes --> D[Pull latest roles + permissions\nfrom IAM API]
-    C -- No --> E[Continue with bundled role data]
-    D --> F[Normalize role titles]
-    E --> F
-    F --> G[Run fuzzy matching\nfor each input title]
-    G --> H[Assign confidence labels\nexact/high/medium/low/not found]
-    H --> I{Supersession\ncheck enabled?}
-    I -- Yes --> J[Compare permissions\nwithin matched role set]
-    I -- No --> K[Render Terraform-ready role list]
-    J --> K
-    K --> L[Display results + review notes\nin Streamlit output panel]
-```
+### Role Inspector
+
+Select any GCP role to browse its full permission set, grouped by service (e.g. `bigquery`, `compute`, `storage`). Each service group is a collapsible expander showing the permissions alphabetically.
+
+Enable **Compare two roles** to view a three-column diff: permissions only in Role A, shared by both, and only in Role B.
+
+### Permission Search
+
+Enter an IAM permission string to find which roles grant it.
+
+- **Exact Matches:** Roles whose permission set includes the exact string — shown with role ID, title, and Terraform string
+- **Partial Matches:** Permission strings containing your query as a substring, ranked by the number of roles that grant them
+- Minimum 3 characters required before searching
+
+### Find Smallest Role
+
+Enter a list of required permissions (one per line) to find the least-privilege GCP role that grants all of them.
+
+- **Exact Matches:** Roles that cover every required permission, sorted by tier (predefined → project → org) then by total permission count (smallest first)
+- **Partial Matches:** Shown only when no exact match exists — top 10 roles ranked by coverage
+- Helps avoid over-provisioning by surfacing the narrowest qualifying role
 
 ---
 
@@ -62,21 +61,31 @@ flowchart TD
 ```text
 gcp-role-lookup/
 ├── app/
-│   ├── main.py                # Streamlit app entry point
-│   ├── matcher.py             # Fuzzy matching logic
-│   ├── formatter.py           # Terraform/HCL output formatting
-│   ├── role_loader.py         # Local cache loading + optional API refresh
-│   └── supersession.py        # Permission subset/supersession checks
-├── scripts/
-│   └── refresh_roles.py       # Refreshes roles + permissions via IAM API
+│   ├── main.py                # Streamlit entry point — CSS, session state, nav, dispatch
+│   ├── matcher.py             # Fuzzy title-to-ID matching (rapidfuzz)
+│   ├── formatter.py           # Terraform HCL and JSON output formatting
+│   ├── role_loader.py         # Local cache loading + optional live API refresh
+│   ├── supersession.py        # Permission subset / supersession detection
+│   └── page_views/
+│       ├── resolve.py         # Resolve Titles page
+│       ├── inspect.py         # Role Inspector page
+│       ├── permissions.py     # Permission Search page
+│       └── find_role.py       # Find Smallest Role page
 ├── data/
-│   ├── gcp_roles.json         # Role title/name cache used by app
-│   └── role_permissions.json  # Permission map used for supersession checks
-├── setup_windows.ps1          # Windows helper setup script
-├── setup_linux.sh             # Linux/macOS helper setup script
-├── requirements.txt
+│   ├── gcp_roles.json         # Role title → ID cache (bundled, refreshable)
+│   └── role_permissions.json  # Role ID → permissions map (bundled, refreshable)
+├── scripts/
+│   └── refresh_roles.py       # Pulls latest roles + permissions from IAM API
+├── tests/
+│   ├── test_find_role_logic.py
+│   ├── test_inspect_logic.py
+│   ├── test_permissions_logic.py
+│   └── test_role_loader.py
+├── Architecture.md            # Design decisions and technical reference
 ├── ContainerFile              # Podman/Docker build file
-└── README.md
+├── setup_windows.ps1          # Windows setup + launch script
+├── setup_linux.sh             # Linux/macOS setup + launch script
+└── requirements.txt
 ```
 
 ---
@@ -88,10 +97,10 @@ gcp-role-lookup/
 - **Python 3.12+**
 - **pip**
 
-### Required only for data refresh (`scripts/refresh_roles.py`)
+### Required only for live data refresh
 
-- **gcloud CLI**
-- Authenticated credentials that can call IAM roles APIs
+- **gcloud CLI** installed and authenticated
+- Identity with permission to call the IAM roles API (`iam.roles.list`)
 
 ### Verify prerequisites
 
@@ -101,13 +110,13 @@ pip --version
 gcloud --version
 ```
 
-If `gcloud` is missing, install it from: <https://cloud.google.com/sdk/docs/install>
+If `gcloud` is missing, install from https://cloud.google.com/sdk/docs/install
 
 ---
 
 ## Authentication for Live Refresh
 
-You only need authentication when you refresh role/permission data from GCP.
+Authentication is only needed when refreshing role or permission data from GCP. The app works fully offline with the bundled data files.
 
 ### Recommended: Application Default Credentials (ADC)
 
@@ -116,21 +125,14 @@ gcloud auth application-default login
 ```
 
 Default ADC file locations:
-- **Windows**: `%APPDATA%\gcloud\application_default_credentials.json`
-- **Linux/macOS**: `~/.config/gcloud/application_default_credentials.json`
+- **Windows:** `%APPDATA%\gcloud\application_default_credentials.json`
+- **Linux/macOS:** `~/.config/gcloud/application_default_credentials.json`
 
-### Optional: Explicit credentials path
-
-Set `GOOGLE_APPLICATION_CREDENTIALS` to a service-account JSON key path.
+### Optional: Explicit service account key
 
 **PowerShell (Windows):**
 ```powershell
 $env:GOOGLE_APPLICATION_CREDENTIALS = "C:\path\to\service-account-key.json"
-```
-
-**Command Prompt (Windows):**
-```cmd
-set GOOGLE_APPLICATION_CREDENTIALS=C:\path\to\service-account-key.json
 ```
 
 **bash (Linux/macOS):**
@@ -150,12 +152,7 @@ From PowerShell in the repository root:
 .\setup_windows.ps1
 ```
 
-What this script does:
-- Checks Python 3.12+
-- Checks `gcloud` (unless skipped)
-- Offers optional ADC login at the start (for live refresh only)
-- Creates `.venv` and installs dependencies
-- Starts Streamlit automatically
+The script checks Python 3.12+, optionally checks `gcloud`, creates `.venv`, installs dependencies, and starts Streamlit.
 
 If PowerShell blocks script execution:
 
@@ -179,7 +176,7 @@ pip install -r requirements.txt
 streamlit run app/main.py
 ```
 
-App URL: <http://localhost:8501>
+App URL: http://localhost:8501
 
 ---
 
@@ -191,13 +188,6 @@ App URL: <http://localhost:8501>
 chmod +x setup_linux.sh
 ./setup_linux.sh
 ```
-
-What this script does:
-- Checks Python 3.12+
-- Checks `gcloud` (unless skipped)
-- Offers optional ADC login at the start (for live refresh only)
-- Creates/activates `.venv` and installs dependencies
-- Starts Streamlit automatically
 
 Optional flags:
 
@@ -215,45 +205,33 @@ pip install -r requirements.txt
 streamlit run app/main.py
 ```
 
-App URL: <http://localhost:8501>
+App URL: http://localhost:8501
 
 ---
 
 ## Run in a Container (Podman or Docker)
 
-> The repository uses a build file named `ContainerFile` (capital **F**). Use `-f ContainerFile` explicitly.
+> The build file is named `ContainerFile` (capital **F**). Use `-f ContainerFile` explicitly.
 
-### Build image
+### Build
 
-**Podman:**
 ```bash
+# Podman
 podman build -f ContainerFile -t gcp-role-lookup .
-```
 
-**Docker:**
-```bash
+# Docker
 docker build -f ContainerFile -t gcp-role-lookup .
 ```
 
-### Run with bundled static data (no live refresh credentials)
+### Run with bundled static data (no credentials needed)
 
-**Podman:**
 ```bash
 podman run --rm -p 8501:8501 gcp-role-lookup
 ```
 
-**Docker:**
-```bash
-docker run --rm -p 8501:8501 gcp-role-lookup
-```
+### Run with ADC mounted (enables live refresh)
 
-Open: <http://localhost:8501>
-
-### Run with ADC mounted (enable live refresh in UI)
-
-#### Linux/macOS host
-
-**Podman:**
+**Linux/macOS:**
 ```bash
 podman run --rm -p 8501:8501 \
   -v "$HOME/.config/gcloud:/home/appuser/.config/gcloud:ro" \
@@ -261,16 +239,7 @@ podman run --rm -p 8501:8501 \
   gcp-role-lookup
 ```
 
-**Docker:**
-```bash
-docker run --rm -p 8501:8501 \
-  -v "$HOME/.config/gcloud:/home/appuser/.config/gcloud:ro" \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/home/appuser/.config/gcloud/application_default_credentials.json \
-  gcp-role-lookup
-```
-
-#### Windows host (PowerShell)
-
+**Windows PowerShell:**
 ```powershell
 docker run --rm -p 8501:8501 `
   -v "$env:APPDATA\gcloud:/home/appuser/.config/gcloud:ro" `
@@ -278,60 +247,62 @@ docker run --rm -p 8501:8501 `
   gcp-role-lookup
 ```
 
-You can replace `docker` with `podman` if preferred.
-
 ---
 
 ## Refresh Role and Permission Data
 
-Run this from the repository root.
+Updates both `data/gcp_roles.json` and `data/role_permissions.json` by calling the GCP IAM API.
 
-**Windows:**
-```powershell
-python scripts/refresh_roles.py
-```
-
-**Linux/macOS:**
 ```bash
+# Windows
+python scripts/refresh_roles.py
+
+# Linux/macOS
 python3 scripts/refresh_roles.py
 ```
 
-What it updates:
-- `data/gcp_roles.json`
-- `data/role_permissions.json`
-
-Expected requirements:
-- `gcloud` installed and authenticated
-- Identity allowed to call IAM roles API (`iam.roles.list`)
+Alternatively, use the **↻ Refresh from GCP API** button in the app sidebar (requires valid ADC credentials).
 
 ---
 
 ## How Matching Works
 
-Confidence levels used by the matcher:
+The Resolve Titles page matches input titles to role IDs using fuzzy string matching (rapidfuzz). Each result is assigned a confidence label:
 
-| Score Range | Status    | Output behavior |
+| Confidence | Score | Output behaviour |
 |---|---|---|
-| 100 | Exact | Included as normal |
-| 85–99 | High | Included with inline warning comment |
-| 60–84 | Medium | Included with inline warning comment |
-| <60 | Low | Commented out, review required |
-| no candidate | Not found | Commented out, review required |
+| Exact | 100 | Included as-is |
+| High | 85–99 | Included, flagged for review |
+| Medium | 60–84 | Included, flagged for review |
+| Low | < 60 | Commented out in HCL output |
+| Not found | — | Commented out in HCL output |
 
 ---
 
 ## Supersession Detection
 
-If permission data is available (`data/role_permissions.json`), the app checks whether one selected role is a strict subset of another selected role.
-
-When superseded, the narrower role is commented out in output, for example:
+When `data/role_permissions.json` is present, the app checks whether any resolved role's permission set is a strict subset of another resolved role in the same batch. The narrower (superseded) role is marked and commented out in output:
 
 ```hcl
-# "roles/bigquery.dataEditor", # BigQuery Data Editor [Superseded by roles/bigquery.admin]
-"roles/bigquery.admin", # BigQuery Admin
+# "roles/bigquery.dataViewer", # BigQuery Data Viewer [Superseded by roles/bigquery.dataEditor]
+"roles/bigquery.dataEditor",   # BigQuery Data Editor
 ```
 
-If permission data is missing, the app still works but skips supersession checks.
+If `role_permissions.json` is missing, supersession checks are skipped and the app works normally.
+
+---
+
+## Running Tests
+
+```bash
+# Windows
+.venv\Scripts\python -m pytest tests/ -v
+
+# Linux/macOS
+.venv/bin/python -m pytest tests/ -v
+```
+
+The test suite covers matching logic, permission grouping, search functions, role loader, and the Find Smallest Role algorithm (43 tests total).
 
 ---
 
@@ -339,33 +310,18 @@ If permission data is missing, the app still works but skips supersession checks
 
 ### `gcloud CLI not found in PATH`
 
-Install: <https://cloud.google.com/sdk/docs/install>
+Install from https://cloud.google.com/sdk/docs/install, then verify with `gcloud --version`.
 
-Then verify:
-
-```bash
-gcloud --version
-```
-
-### Authentication errors (`No ADC found`, `ADC authentication failed`, `Unauthorized 401`, `Forbidden 403`)
-
-Run:
+### Authentication errors (`No ADC found`, `401`, `403`)
 
 ```bash
 gcloud auth application-default login
+gcloud auth list   # verify active account
 ```
 
-Then verify account context:
+### `role_permissions.json not found` warning in sidebar
 
-```bash
-gcloud auth list
-```
-
-If using service-account keys, confirm `GOOGLE_APPLICATION_CREDENTIALS` points to a real file.
-
-### `role_permissions.json not found` warning
-
-This means supersession detection is disabled. Refresh data:
+The Role Inspector, Permission Search, and Find Smallest Role pages all require this file. Refresh it:
 
 ```bash
 python scripts/refresh_roles.py
@@ -373,25 +329,13 @@ python scripts/refresh_roles.py
 
 ### Streamlit does not start
 
-Reinstall dependencies in your active environment:
-
 ```bash
 pip install -r requirements.txt
 streamlit run app/main.py
 ```
 
-### Port `8501` already in use
-
-Run Streamlit on another port:
+### Port 8501 already in use
 
 ```bash
 streamlit run app/main.py --server.port 8502
 ```
-
----
-
-## Notes
-
-- The app can be used **offline** with the checked-in role cache.
-- Live refresh requires network access to Google APIs and valid credentials.
-- Container runtime does not include the gcloud CLI; mount credentials if using the in-app refresh.
