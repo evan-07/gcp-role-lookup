@@ -30,10 +30,17 @@ Three layers, each with a single clear purpose:
 
 ```python
 @dataclass
+class RemovedRole:
+    role_id: str             # e.g. "roles/storage.objectViewer"
+    role_title: str          # e.g. "Storage Object Viewer"
+    superseded_by_id: str    # e.g. "roles/storage.admin"
+    superseded_by_title: str # e.g. "Storage Admin"
+
+@dataclass
 class DeduplicationResult:
-    kept: list[str]                          # role IDs to keep
-    removed: list[tuple[str, str, str]]      # (role_id, superseded_by_id, superseded_by_title)
-    unknown: list[str]                       # role IDs not found in roles data
+    kept: list[str]              # role IDs in the minimal set
+    removed: list[RemovedRole]   # roles eliminated as redundant
+    unknown: list[str]           # role IDs not found in roles data or permissions map
 
 def deduplicate_role_ids(
     role_ids: list[str],
@@ -43,10 +50,12 @@ def deduplicate_role_ids(
     ...
 ```
 
-- Validates each ID exists in `permissions` map
-- Runs pairwise strict-subset check (`perms(A) ⊂ perms(B)` → A is superseded)
+- Receives only pre-validated `roles/` prefixed IDs (validation is the page view's responsibility)
+- Builds `id_to_title` lookup using `r["name"]` and `r["title"]` fields from the roles dicts
+- Collects IDs missing from `permissions` map into `unknown`
+- Runs pairwise strict-subset check (`perms(A) ⊂ perms(B)` → A is superseded); uses Python `set.__lt__` which requires *strict* subset
+- Roles with identical permissions: neither is a strict subset of the other, so both are kept
 - Returns a clean `DeduplicationResult` — no `MatchResult` objects involved
-- Unknown IDs (not in roles data or permissions map) collected separately
 
 ### 2. `app/formatter.py` — two new functions
 
@@ -69,15 +78,23 @@ def format_dedup_as_json(result: DeduplicationResult, clean: bool = False) -> st
 "roles/storage.admin",          # Storage Admin
 ```
 
-**Annotated JSON (`clean=False`):**
+**Annotated JSON (`clean=False`):** Returns a structured object (not a plain array) to avoid invalid `//` comments in JSON:
 ```json
-[
-  "roles/storage.admin",
-  // "roles/storage.objectViewer"  // Superseded by Storage Admin
-]
+{
+  "kept": [
+    "roles/storage.admin"
+  ],
+  "superseded": [
+    {
+      "role": "roles/storage.objectViewer",
+      "superseded_by": "roles/storage.admin",
+      "reason": "Storage Object Viewer is a strict subset of Storage Admin"
+    }
+  ]
+}
 ```
 
-**Clean JSON (`clean=True`):**
+**Clean JSON (`clean=True`):** Returns a plain array — drop-in for Terraform `var.roles`:
 ```json
 [
   "roles/storage.admin"
@@ -88,12 +105,18 @@ def format_dedup_as_json(result: DeduplicationResult, clean: bool = False) -> st
 
 Self-contained page view. Imports only from `app.supersession` and `app.formatter`. No dependency on `resolve.py` or `matcher.py`.
 
+Signature: `render(roles: list[dict], permissions: dict[str, set[str]]) -> None`
+
 Responsibilities:
 - Render header, input text area, action buttons
-- Validate input lines: strip whitespace, ignore blank lines, warn on non-`roles/` entries
-- Call `deduplicate_role_ids()` and store result in session state
+- **Validate** input lines: strip whitespace, ignore blank lines
+  - Lines not starting with `roles/` → collected into a pre-validation unknown list
+  - Pre-validated `roles/` IDs are passed to `deduplicate_role_ids()`
+  - `deduplicate_role_ids()` itself does not perform this prefix check
+- Call `deduplicate_role_ids()` and store `DeduplicationResult` in session state
 - Render stat badges, format toggle (HCL/JSON), annotated/clean radio
-- Render "Unknown IDs" warning table when applicable
+- Output rendered via `st.code()` (provides built-in copy-to-clipboard button)
+- Render "Unknown IDs" warning table (collapsible expander) when applicable
 
 ---
 
@@ -140,7 +163,12 @@ New keys added to `_DEFAULTS` in `main.py`:
 
 - New sidebar button: **"Deduplicate Roles"** added to `main.py` between "Find Smallest Role" and "Help"
 - Page key: `"deduplicate"`
-- Dispatch: `from app.page_views.deduplicate import render as render_deduplicate`
+- Dispatch:
+  ```python
+  elif st.session_state["page"] == "deduplicate":
+      from app.page_views.deduplicate import render as render_deduplicate
+      render_deduplicate(roles_data, permissions_data)
+  ```
 
 ---
 
@@ -159,13 +187,14 @@ Reuses existing CSS badge classes from `main.py`:
 
 ## Error Handling
 
-| Scenario | Behaviour |
-|----------|-----------|
-| Role ID doesn't start with `roles/` | Collected as unknown, shown in warning table |
-| Role ID starts with `roles/` but not in data | Collected as unknown, shown in warning table |
-| `permissions_data` is empty | Show inline warning: supersession check disabled |
-| All roles supersede each other (circular) | Not possible — strict subset is transitive; the largest role always wins |
-| Single role input | Return it as-is (nothing to compare against) |
+| Scenario | Behaviour | Responsibility |
+|----------|-----------|----------------|
+| Role ID doesn't start with `roles/` | Collected as unknown, shown in warning table | Page view (pre-validation) |
+| Role ID starts with `roles/` but not in permissions data | Collected as unknown by `deduplicate_role_ids()` | `deduplicate_role_ids()` |
+| `permissions_data` is empty | Show inline warning: supersession check disabled, all valid IDs returned as-is | Page view |
+| Two roles with identical permissions | Neither is a strict subset (`set.__lt__` requires strict), both are kept | `deduplicate_role_ids()` |
+| Single role input | Returned as-is in `kept`; nothing to compare against | `deduplicate_role_ids()` |
+| Empty input | Empty `DeduplicationResult`, no output rendered | Page view |
 
 ---
 
