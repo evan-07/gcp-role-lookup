@@ -60,7 +60,7 @@ def test_hcl_annotated_no_removal_clean_output():
     output = format_dedup_as_hcl(RESULT_NO_REMOVAL, clean=False)
     assert '"roles/storage.admin",' in output
     assert '"roles/bigquery.dataViewer",' in output
-    assert "#" not in output.replace("# Storage Admin", "").replace("# BigQuery Data Viewer", "")
+    assert "#" not in output
 
 
 def test_hcl_annotated_empty_result():
@@ -108,7 +108,7 @@ def test_json_annotated_superseded_array():
     parsed = json.loads(output)
     assert len(parsed["superseded"]) == 1
     entry = parsed["superseded"][0]
-    assert entry["role"] == "roles/storage.objectViewer"
+    assert entry["role_id"] == "roles/storage.objectViewer"
     assert entry["superseded_by"] == "roles/storage.admin"
     assert "reason" in entry
 
@@ -124,6 +124,12 @@ def test_json_annotated_empty_result():
     output = format_dedup_as_json(RESULT_EMPTY, clean=False)
     parsed = json.loads(output)
     assert parsed["kept"] == []
+
+
+def test_json_annotated_includes_unknown():
+    output = format_dedup_as_json(RESULT_WITH_UNKNOWN, clean=False)
+    parsed = json.loads(output)
+    assert parsed["unknown"] == ["roles/fake.role"]
 
 
 # ---------------------------------------------------------------------------

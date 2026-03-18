@@ -201,7 +201,7 @@ def format_dedup_as_json(
     if result.removed:
         payload["superseded"] = [
             {
-                "role": r.role_id,
+                "role_id": r.role_id,
                 "superseded_by": r.superseded_by_id,
                 "reason": (
                     f"{r.role_title} is a strict subset of {r.superseded_by_title}"
@@ -211,5 +211,6 @@ def format_dedup_as_json(
         ]
     else:
         payload["superseded"] = []
+    payload["unknown"] = result.unknown
 
     return json.dumps(payload, indent=2)
