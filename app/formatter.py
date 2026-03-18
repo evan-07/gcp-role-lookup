@@ -6,6 +6,8 @@ Exact matches produce clean output; fuzzy/failed matches are
 commented out with inline warnings and confidence levels.
 """
 
+import json
+
 from app.matcher import MatchResult
 
 
@@ -126,3 +128,88 @@ def format_results_summary(
         if r.supersession:
             summary["superseded"] += 1
     return summary
+
+
+# ---------------------------------------------------------------------------
+# Deduplicate Roles output formatters
+# ---------------------------------------------------------------------------
+
+def format_dedup_as_hcl(
+    result: "DeduplicationResult",
+    clean: bool = False,
+) -> str:
+    """
+    Format a DeduplicationResult as Terraform HCL list entries.
+
+    Annotated mode (clean=False):
+        "roles/storage.admin",
+        # "roles/storage.objectViewer", # Storage Object Viewer [Superseded by Storage Admin]
+
+    Clean mode (clean=True):
+        "roles/storage.admin",
+
+    Args:
+        result: DeduplicationResult from deduplicate_role_ids().
+        clean:  If True, omit comments for superseded roles.
+
+    Returns:
+        Formatted multi-line string ready to paste into Terraform.
+    """
+    from app.supersession import DeduplicationResult  # local import avoids circular
+
+    if not result.kept and not result.removed:
+        return ""
+
+    lines: list[str] = []
+
+    for role_id in result.kept:
+        lines.append(f'"{role_id}",')
+
+    if not clean:
+        for removed in result.removed:
+            lines.append(
+                f'# "{removed.role_id}", '
+                f"# {removed.role_title} "
+                f"[Superseded by {removed.superseded_by_title}]"
+            )
+
+    return "\n".join(lines)
+
+
+def format_dedup_as_json(
+    result: "DeduplicationResult",
+    clean: bool = False,
+) -> str:
+    """
+    Format a DeduplicationResult as JSON.
+
+    Clean mode (clean=True): plain array of kept role IDs.
+    Annotated mode (clean=False): structured object with ``kept`` and
+    ``superseded`` arrays so no invalid ``//`` comments are needed.
+
+    Args:
+        result: DeduplicationResult from deduplicate_role_ids().
+        clean:  If True, return a plain JSON array of kept role IDs.
+
+    Returns:
+        JSON string.
+    """
+    if clean:
+        return json.dumps(result.kept, indent=2)
+
+    payload: dict = {"kept": result.kept}
+    if result.removed:
+        payload["superseded"] = [
+            {
+                "role": r.role_id,
+                "superseded_by": r.superseded_by_id,
+                "reason": (
+                    f"{r.role_title} is a strict subset of {r.superseded_by_title}"
+                ),
+            }
+            for r in result.removed
+        ]
+    else:
+        payload["superseded"] = []
+
+    return json.dumps(payload, indent=2)
