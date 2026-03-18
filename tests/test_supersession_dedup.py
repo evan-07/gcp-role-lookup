@@ -1,8 +1,6 @@
 """Tests for deduplicate_role_ids() in supersession.py."""
 
-import pytest
-
-from app.supersession import DeduplicationResult, RemovedRole, deduplicate_role_ids
+from app.supersession import deduplicate_role_ids
 
 # ---------------------------------------------------------------------------
 # Fixtures
