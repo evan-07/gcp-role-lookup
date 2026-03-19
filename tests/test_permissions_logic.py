@@ -155,4 +155,5 @@ def test_try_it_examples_structure():
         assert "description" in ex
         assert "text" in ex
         assert ex["name"]
+        assert ex["description"]
         assert ex["text"]

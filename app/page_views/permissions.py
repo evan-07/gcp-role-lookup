@@ -129,6 +129,9 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
 
     query = st.session_state["permission_search_query"].strip().lower()
 
+    # --- Try it! expander (always visible, below input) ---
+    _render_try_it(_EXAMPLES, "permission_search_query")
+
     if not query:
         return
 
@@ -187,5 +190,3 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
         )
         st.dataframe(df_partial, use_container_width=True, hide_index=True)
 
-    # --- Try it! expander (full-width, below results) ---
-    _render_try_it(_EXAMPLES, "permission_search_query")
