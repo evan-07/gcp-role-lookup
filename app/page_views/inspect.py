@@ -38,20 +38,21 @@ _EXAMPLES: list[dict] = [
 def _render_try_it(examples: list[dict]) -> None:
     """Render a collapsible Try it! expander with example role selections.
 
-    Unlike resolve.py and deduplicate.py, this function sets session state
-    keys directly (no staging-key indirection) because the inputs are
-    selectboxes, not text areas — Streamlit reads selectbox values from
-    session state on every run, so a direct assignment + rerun is safe.
+    Uses on_click callbacks to set session state before the script reruns,
+    which avoids StreamlitAPIException when writing to widget-owned keys.
+    Direct assignment after widget instantiation is not allowed by Streamlit.
     """
     with st.expander("💡 Try it!", expanded=False):
         for i, ex in enumerate(examples):
             st.markdown(f"**{ex['name']}**")
             st.caption(ex["description"])
-            if st.button("Load", key=f"try_inspect_{i}"):
-                st.session_state["inspect_role_a"] = ex["role_a"]
-                st.session_state["inspect_role_b"] = ex["role_b"] or ""
-                st.session_state["inspect_diff_mode"] = ex["diff_mode"]
-                st.rerun()
+
+            def _load(example=ex) -> None:
+                st.session_state["inspect_role_a"] = example["role_a"]
+                st.session_state["inspect_role_b"] = example["role_b"] or ""
+                st.session_state["inspect_diff_mode"] = example["diff_mode"]
+
+            st.button("Load", key=f"try_inspect_{i}", on_click=_load)
 
 
 def group_permissions(perms: set[str]) -> dict[str, list[str]]:

@@ -118,7 +118,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
         col_btn1, col_btn2 = st.columns([1, 1])
         with col_btn1:
             resolve_clicked = st.button(
-                "Resolve Roles →",
+                "Generate",
                 type="primary",
                 use_container_width=True,
                 disabled=not roles,
