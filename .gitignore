@@ -6,5 +6,4 @@ __pycache__/
 *.egg-info/
 .env
 .DS_Store
-docs/superpowers/plans
-docs/superpowers/specs
+docs/superpowers/
