@@ -63,3 +63,17 @@ def test_group_permissions_other_is_last():
 def test_group_permissions_empty():
     from app.page_views.inspect import group_permissions
     assert group_permissions(set()) == {}
+
+
+def test_try_it_examples_structure():
+    from app.page_views.inspect import _EXAMPLES
+    for ex in _EXAMPLES:
+        assert "name" in ex
+        assert "description" in ex
+        assert "role_a" in ex
+        assert "diff_mode" in ex
+        assert ex["name"]
+        assert ex["role_a"].startswith("roles/")
+        assert isinstance(ex["diff_mode"], bool)
+        if ex["diff_mode"]:
+            assert ex.get("role_b", "").startswith("roles/")

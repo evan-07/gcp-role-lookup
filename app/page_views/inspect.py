@@ -10,6 +10,44 @@ from collections import defaultdict
 import streamlit as st
 
 
+_EXAMPLES: list[dict] = [
+    {
+        "name": "Inspect BigQuery Data Editor",
+        "description": "View all permissions granted by the BigQuery Data Editor role, grouped by service.",
+        "role_a": "roles/bigquery.dataEditor",
+        "role_b": None,
+        "diff_mode": False,
+    },
+    {
+        "name": "Compare Storage roles",
+        "description": "Side-by-side diff of Storage Admin vs Storage Object Viewer — shows which permissions are unique to each.",
+        "role_a": "roles/storage.admin",
+        "role_b": "roles/storage.objectViewer",
+        "diff_mode": True,
+    },
+    {
+        "name": "Compare BigQuery roles",
+        "description": "BigQuery Data Editor vs Data Viewer — illustrates what additional write permissions the Editor adds.",
+        "role_a": "roles/bigquery.dataEditor",
+        "role_b": "roles/bigquery.dataViewer",
+        "diff_mode": True,
+    },
+]
+
+
+def _render_try_it(examples: list[dict]) -> None:
+    """Render a collapsible Try it! expander with example role selections."""
+    with st.expander("💡 Try it!", expanded=False):
+        for i, ex in enumerate(examples):
+            st.markdown(f"**{ex['name']}**")
+            st.caption(ex["description"])
+            if st.button("Load", key=f"try_inspect_{i}"):
+                st.session_state["inspect_role_a"] = ex["role_a"]
+                st.session_state["inspect_role_b"] = ex["role_b"] or ""
+                st.session_state["inspect_diff_mode"] = ex["diff_mode"]
+                st.rerun()
+
+
 def group_permissions(perms: set[str]) -> dict[str, list[str]]:
     """Group permissions by service prefix (part before first dot).
 
@@ -70,6 +108,9 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
         return
 
     role_title_map = {r["name"]: r["title"] for r in roles}
+
+    # --- Try it! expander (above columns so it's always visible) ---
+    _render_try_it(_EXAMPLES)
 
     col_input, col_output = st.columns([1, 2], gap="large")
 
