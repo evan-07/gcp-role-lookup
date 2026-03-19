@@ -20,6 +20,11 @@ def _validate_lines(raw_text: str) -> tuple[list[str], list[str]]:
     """
     Parse textarea input into valid role IDs and invalid lines.
 
+    Handles plain role IDs and Terraform HCL-quoted format:
+        roles/storage.admin
+        "roles/storage.admin",
+        "roles/storage.admin", "roles/storage.bucketViewer",
+
     Args:
         raw_text: Multi-line string from the textarea.
 
@@ -30,13 +35,15 @@ def _validate_lines(raw_text: str) -> tuple[list[str], list[str]]:
     valid: list[str] = []
     invalid: list[str] = []
     for line in raw_text.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if stripped.startswith("roles/"):
-            valid.append(stripped)
-        else:
-            invalid.append(stripped)
+        # Split by comma to support multiple quoted entries on one line
+        tokens = [t.strip(' ",') for t in line.split(',')]
+        for token in tokens:
+            if not token:
+                continue
+            if token.startswith("roles/"):
+                valid.append(token)
+            else:
+                invalid.append(token)
     return valid, invalid
 
 
@@ -68,7 +75,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
 
     with col_input:
         st.markdown(
-            "<div class='section-label'>Role IDs — one per line</div>",
+            "<div class='section-label'>Role IDs — plain or Terraform HCL format</div>",
             unsafe_allow_html=True,
         )
         input_text = st.text_area(
@@ -76,8 +83,10 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             placeholder=(
                 "roles/storage.admin\n"
                 "roles/storage.objectViewer\n"
-                "roles/bigquery.dataEditor\n"
-                "roles/bigquery.dataViewer"
+                "\n"
+                "# or Terraform HCL format:\n"
+                '"roles/bigquery.dataEditor",\n'
+                '"roles/bigquery.dataViewer",'
             ),
             label_visibility="collapsed",
             key="deduplicate_input",
