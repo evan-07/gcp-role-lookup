@@ -47,8 +47,6 @@ def _render_try_it(examples: list[dict]) -> None:
         for i, ex in enumerate(examples):
             st.markdown(f"**{ex['name']}**")
             st.caption(ex["description"])
-            preview = ex["role_a"] + (f"\n{ex['role_b']}" if ex["role_b"] else "")
-            st.code(preview, language="text")
             if st.button("Load", key=f"try_inspect_{i}"):
                 st.session_state["inspect_role_a"] = ex["role_a"]
                 st.session_state["inspect_role_b"] = ex["role_b"] or ""
