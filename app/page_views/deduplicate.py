@@ -16,6 +16,51 @@ from app.formatter import format_dedup_as_hcl, format_dedup_as_json
 from app.supersession import DeduplicationResult, deduplicate_role_ids
 
 
+_EXAMPLES: list[dict] = [
+    {
+        "name": "Storage redundancy",
+        "description": "storage.admin covers storage.objectViewer and storage.objectCreator — they will be removed.",
+        "text": (
+            "roles/storage.admin\n"
+            "roles/storage.objectViewer\n"
+            "roles/storage.objectCreator"
+        ),
+    },
+    {
+        "name": "BigQuery redundancy",
+        "description": "bigquery.admin covers the narrower roles — they will be removed.",
+        "text": (
+            "roles/bigquery.admin\n"
+            "roles/bigquery.dataEditor\n"
+            "roles/bigquery.dataViewer\n"
+            "roles/bigquery.jobUser"
+        ),
+    },
+    {
+        "name": "Terraform HCL format",
+        "description": "Shows that quoted Terraform syntax is accepted directly as input alongside plain role IDs.",
+        "text": (
+            '"roles/storage.admin",\n'
+            '"roles/storage.objectViewer",\n'
+            '"roles/bigquery.dataEditor",\n'
+            '"roles/bigquery.dataViewer",'
+        ),
+    },
+]
+
+
+def _render_try_it(examples: list[dict], state_key: str) -> None:
+    """Render a collapsible expander with example inputs the user can load."""
+    with st.expander("💡 Try it!", expanded=False):
+        for i, ex in enumerate(examples):
+            st.markdown(f"**{ex['name']}**")
+            st.caption(ex["description"])
+            st.code(ex["text"], language="text")
+            if st.button("Load", key=f"try_{state_key}_{i}"):
+                st.session_state[state_key] = ex["text"]
+                st.rerun()
+
+
 def _validate_lines(raw_text: str) -> tuple[list[str], list[str]]:
     """
     Parse textarea input into valid role IDs and invalid lines.
@@ -111,6 +156,8 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             st.session_state["deduplicate_input"] = ""
             st.session_state["deduplicate_results"] = None
             st.rerun()
+
+        _render_try_it(_EXAMPLES, "deduplicate_input")
 
     # Run deduplication when button clicked; cache result in session state
     # so format/mode toggles don't re-run the logic.
