@@ -36,7 +36,13 @@ _EXAMPLES: list[dict] = [
 
 
 def _render_try_it(examples: list[dict]) -> None:
-    """Render a collapsible Try it! expander with example role selections."""
+    """Render a collapsible Try it! expander with example role selections.
+
+    Unlike resolve.py and deduplicate.py, this function sets session state
+    keys directly (no staging-key indirection) because the inputs are
+    selectboxes, not text areas — Streamlit reads selectbox values from
+    session state on every run, so a direct assignment + rerun is safe.
+    """
     with st.expander("💡 Try it!", expanded=False):
         for i, ex in enumerate(examples):
             st.markdown(f"**{ex['name']}**")

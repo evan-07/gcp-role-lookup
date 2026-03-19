@@ -77,3 +77,5 @@ def test_try_it_examples_structure():
         assert isinstance(ex["diff_mode"], bool)
         if ex["diff_mode"]:
             assert ex.get("role_b", "").startswith("roles/")
+        else:
+            assert ex.get("role_b") is None or ex.get("role_b", "").startswith("roles/")
