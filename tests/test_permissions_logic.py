@@ -146,3 +146,13 @@ def test_find_partial_matches_empty():
     rows, total = find_partial_matches("zzznomatch", perms)
     assert rows == []
     assert total == 0
+
+
+def test_try_it_examples_structure():
+    from app.page_views.permissions import _EXAMPLES
+    for ex in _EXAMPLES:
+        assert "name" in ex
+        assert "description" in ex
+        assert "text" in ex
+        assert ex["name"]
+        assert ex["text"]

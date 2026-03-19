@@ -8,6 +8,37 @@ finds every role that grants it and displays a Terraform-ready list.
 import streamlit as st
 
 
+_EXAMPLES: list[dict] = [
+    {
+        "name": "Exact permission lookup",
+        "description": "Find all roles that grant bigquery.tables.create exactly.",
+        "text": "bigquery.tables.create",
+    },
+    {
+        "name": "Partial — service accounts",
+        "description": "Discover all permissions containing 'iam.serviceAccounts' and the roles that grant them.",
+        "text": "iam.serviceAccounts",
+    },
+    {
+        "name": "Partial — storage objects",
+        "description": "Explore all storage object permissions and which roles cover them.",
+        "text": "storage.objects",
+    },
+]
+
+
+def _render_try_it(examples: list[dict], state_key: str) -> None:
+    """Render a collapsible expander with example inputs the user can load."""
+    with st.expander("💡 Try it!", expanded=False):
+        for i, ex in enumerate(examples):
+            st.markdown(f"**{ex['name']}**")
+            st.caption(ex["description"])
+            st.code(ex["text"], language="text")
+            if st.button("Load", key=f"try_{state_key}_{i}"):
+                st.session_state[f"_load_{state_key}"] = ex["text"]
+                st.rerun()
+
+
 def sort_key(role_id: str) -> tuple:
     """Sort bucket: predefined (roles/) → project → org → other, then alpha."""
     if role_id.startswith("roles/"):
@@ -52,6 +83,12 @@ def find_partial_matches(
 
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Permission Search page."""
+
+    # Resolve any pending Try it! load before the text_input widget is instantiated.
+    if "_load_permission_search_query" in st.session_state:
+        st.session_state["permission_search_query"] = st.session_state.pop(
+            "_load_permission_search_query"
+        )
 
     st.markdown(
         """
@@ -149,3 +186,6 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             [{"Permission": perm, "# Roles": count} for perm, count in partial_rows]
         )
         st.dataframe(df_partial, use_container_width=True, hide_index=True)
+
+    # --- Try it! expander (full-width, below results) ---
+    _render_try_it(_EXAMPLES, "permission_search_query")
