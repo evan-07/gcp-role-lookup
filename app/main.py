@@ -158,6 +158,7 @@ _DEFAULTS: dict = {
     "inspect_diff_mode": False,
     "permission_search_query": "",
     "resolve_output_format": "HCL",
+    "resolve_output_mode": "Annotated",
     "find_role_input": "",
     "resolve_results": None,
     "roles_load_error": None,

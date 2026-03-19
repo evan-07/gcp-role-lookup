@@ -21,24 +21,29 @@ def _confidence_label(score: float) -> str:
     return "Low"
 
 
-def format_as_terraform(results: list[MatchResult]) -> str:
+def format_as_terraform(results: list[MatchResult], clean: bool = False) -> str:
     """
     Format a list of MatchResults as Terraform HCL list entries.
 
-    Exact matches:
-        "roles/bigquery.dataEditor", # BigQuery Data Editor
+    Annotated mode (clean=False):
+        Exact matches:
+            "roles/bigquery.dataEditor", # BigQuery Data Editor
+        Fuzzy matches (high/medium) — included with warning:
+            # ⚠️ High confidence (92%) — matched "Storage Admin"
+            "roles/storage.admin", # Storage Admin [auto-matched]
+        Low confidence / not found — commented out:
+            # ❌ No match found for: "Stoarge Adimn"
+        Superseded — commented out:
+            # "roles/bigquery.dataViewer", # ... [Superseded by ...]
 
-    Fuzzy matches (high/medium) — included with warning:
-        # ⚠️ High confidence (92%) — matched "Storage Admin"
-        "roles/storage.admin", # Storage Admin [auto-matched]
-
-    Low confidence / not found — commented out:
-        # ❌ No match found for: "Stoarge Adimn"
-        # Suggestions:
-        #   - "Storage Admin" → roles/storage.admin (61%)
+    Clean mode (clean=True):
+        Only resolved, non-superseded roles — no comment lines:
+            "roles/bigquery.dataEditor",
+            "roles/storage.admin",
 
     Args:
         results: List of MatchResult from matcher.match_titles_bulk.
+        clean:   If True, emit only kept role IDs with no comment lines.
 
     Returns:
         Formatted multi-line string ready to paste into Terraform.
@@ -50,6 +55,14 @@ def format_as_terraform(results: list[MatchResult]) -> str:
 
     for result in results:
         if result.status == "empty":
+            continue
+
+        if clean:
+            # Emit only resolved, non-superseded roles — no comments
+            if result.supersession:
+                continue
+            if result.status in ("exact", "high", "medium") and result.role_id:
+                lines.append(f'"{result.role_id}",')
             continue
 
         # Superseded roles are commented out regardless of match status

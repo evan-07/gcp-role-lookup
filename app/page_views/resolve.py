@@ -91,6 +91,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
 
     with col_output:
         fmt = st.session_state.get("resolve_output_format", "HCL")
+        mode = st.session_state.get("resolve_output_mode", "Annotated")
         label = "Terraform HCL Output" if fmt == "HCL" else "JSON Role Array"
         st.markdown(
             f"<div class='section-label'>{label}</div>",
@@ -117,20 +118,38 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
                 unsafe_allow_html=True,
             )
 
-            st.radio(
-                "Output format",
-                ["HCL", "JSON"],
-                horizontal=True,
-                key="resolve_output_format",
-                label_visibility="collapsed",
-            )
+            col_fmt, col_mode = st.columns([1, 1])
+            with col_fmt:
+                st.radio(
+                    "Output format",
+                    ["HCL", "JSON"],
+                    horizontal=True,
+                    key="resolve_output_format",
+                    label_visibility="collapsed",
+                )
+            with col_mode:
+                st.radio(
+                    "Output mode",
+                    ["Annotated", "Clean"],
+                    horizontal=True,
+                    key="resolve_output_mode",
+                    label_visibility="collapsed",
+                )
 
+            is_clean = mode == "Clean"
             if fmt == "HCL":
-                hcl_output = format_as_terraform(results)
+                hcl_output = format_as_terraform(results, clean=is_clean)
                 st.code(hcl_output, language="hcl")
             else:
                 import json
-                role_ids = [r.role_id for r in results if r.role_id is not None]
+                if is_clean:
+                    role_ids = [
+                        r.role_id for r in results
+                        if r.role_id is not None and not r.supersession
+                        and r.status in ("exact", "high", "medium")
+                    ]
+                else:
+                    role_ids = [r.role_id for r in results if r.role_id is not None]
                 st.code(json.dumps(role_ids, indent=2), language="json")
 
         elif resolve_clicked and not roles:
