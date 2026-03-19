@@ -60,12 +60,18 @@ def _render_try_it(examples: list[dict], state_key: str) -> None:
             st.caption(ex["description"])
             st.code(ex["text"], language="text")
             if st.button("Load", key=f"try_{state_key}_{i}"):
-                st.session_state[state_key] = ex["text"]
+                st.session_state[f"_load_{state_key}"] = ex["text"]
                 st.rerun()
 
 
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Resolve Titles page."""
+
+    # Resolve any pending Try it! load before the textarea widget is instantiated.
+    # Streamlit forbids writing to a widget-bound key after the widget renders,
+    # so we use a staging key (_load_*) that is copied here on the next run.
+    if "_load_resolve_input" in st.session_state:
+        st.session_state["resolve_input"] = st.session_state.pop("_load_resolve_input")
 
     # --- Main panel ---
     if st.session_state.get("roles_load_error"):
