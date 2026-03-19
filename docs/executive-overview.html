@@ -545,9 +545,60 @@
 </section>
 
 <!-- ══════════════════════════════════
-     4. POTENTIAL SAVINGS
+     4. AUDIT & REMEDIATE
 ══════════════════════════════════ -->
-<section id="savings">
+<section id="audit">
+  <div class="container">
+    <div class="section-label">Use Case</div>
+    <h2 class="section-title">Audit &amp; Remediate Existing Access</h2>
+    <div class="divider"></div>
+    <p class="section-desc">Beyond evaluating new IAM requests, the tool can be applied to existing role grants — surfacing redundancy that was approved in the past and helping teams bring access back to least-privilege.</p>
+
+    <div class="flow-wrap">
+      <div class="flow-high">
+        <div class="flow-box">
+          <div class="box-icon">📤</div>
+          <div class="box-label">Export IAM Bindings</div>
+          <div class="box-sub">From Terraform state, GCP Console, or gcloud</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">
+          <div class="box-icon">📋</div>
+          <div class="box-label">Paste Role IDs</div>
+          <div class="box-sub">Into the Deduplicate Roles tool</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">
+          <div class="box-icon">🔍</div>
+          <div class="box-label">Review Redundancy Flags</div>
+          <div class="box-sub">Superseded roles identified automatically</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">
+          <div class="box-icon">🧹</div>
+          <div class="box-label">Remove Redundant Roles</div>
+          <div class="box-sub">Update Terraform config to drop superseded grants</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="savings-details" style="margin-top: 28px;">
+      <div class="savings-item">
+        <h4>Proactive Compliance</h4>
+        <p>Periodically running the deduplication check helps catch role creep before it becomes an audit finding.</p>
+      </div>
+      <div class="savings-item">
+        <h4>Terraform Cleanup</h4>
+        <p>Redundant bindings identified by the tool map directly to resources to remove from your IaC, keeping configs clean and reviewable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════
+     5. POTENTIAL SAVINGS
+══════════════════════════════════ -->
+<section id="savings" style="background: var(--gray-light)">
   <div class="container">
     <div class="section-label">Potential Impact</div>
     <h2 class="section-title">Time Savings &amp; Risk Reduction</h2>
@@ -591,9 +642,9 @@
 </section>
 
 <!-- ══════════════════════════════════
-     5. TECH STACK
+     6. TECH STACK
 ══════════════════════════════════ -->
-<section id="tech-stack">
+<section id="tech-stack" style="background: var(--white)">
   <div class="container">
     <div class="section-label">Technology Stack</div>
     <h2 class="section-title">Lightweight, Local, No New Infrastructure</h2>
