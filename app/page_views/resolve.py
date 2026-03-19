@@ -13,8 +13,65 @@ from app.matcher import MatchResult, match_titles_bulk
 from app.supersession import check_supersessions
 
 
+_EXAMPLES: list[dict] = [
+    {
+        "name": "Common roles",
+        "description": "Exact matches for frequently used roles across BigQuery, Storage, Pub/Sub, and Cloud Run.",
+        "text": (
+            "BigQuery Data Editor\n"
+            "BigQuery Data Viewer\n"
+            "Storage Admin\n"
+            "Pub/Sub Publisher\n"
+            "Cloud Run Invoker"
+        ),
+    },
+    {
+        "name": "Fuzzy matches",
+        "description": "Near-typos — load this and click Resolve Roles to see confidence scoring and the Review Required table.",
+        "text": (
+            "BigQuery Data Editer\n"
+            "Stoarge Admin\n"
+            "PubSub Publishr\n"
+            "Cloud Run Invokr"
+        ),
+    },
+    {
+        "name": "Superseded roles",
+        "description": (
+            "Includes roles whose permissions are fully covered by another role in the batch. "
+            "Requires role_permissions.json to be loaded (see sidebar) to show supersession markers; "
+            "otherwise resolves normally without them."
+        ),
+        "text": (
+            "BigQuery Data Editor\n"
+            "BigQuery Data Viewer\n"
+            "Storage Admin\n"
+            "Storage Object Viewer"
+        ),
+    },
+]
+
+
+def _render_try_it(examples: list[dict], state_key: str) -> None:
+    """Render a collapsible expander with example inputs the user can load."""
+    with st.expander("💡 Try it!", expanded=False):
+        for i, ex in enumerate(examples):
+            st.markdown(f"**{ex['name']}**")
+            st.caption(ex["description"])
+            st.code(ex["text"], language="text")
+            if st.button("Load", key=f"try_{state_key}_{i}"):
+                st.session_state[f"_load_{state_key}"] = ex["text"]
+                st.rerun()
+
+
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Resolve Titles page."""
+
+    # Resolve any pending Try it! load before the textarea widget is instantiated.
+    # Streamlit forbids writing to a widget-bound key after the widget renders,
+    # so we use a staging key (_load_*) that is copied here on the next run.
+    if "_load_resolve_input" in st.session_state:
+        st.session_state["resolve_input"] = st.session_state.pop("_load_resolve_input")
 
     # --- Main panel ---
     if st.session_state.get("roles_load_error"):
@@ -91,6 +148,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
 
     with col_output:
         fmt = st.session_state.get("resolve_output_format", "HCL")
+        mode = st.session_state.get("resolve_output_mode", "Annotated")
         label = "Terraform HCL Output" if fmt == "HCL" else "JSON Role Array"
         st.markdown(
             f"<div class='section-label'>{label}</div>",
@@ -117,20 +175,38 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
                 unsafe_allow_html=True,
             )
 
-            st.radio(
-                "Output format",
-                ["HCL", "JSON"],
-                horizontal=True,
-                key="resolve_output_format",
-                label_visibility="collapsed",
-            )
+            col_fmt, col_mode = st.columns([1, 1])
+            with col_fmt:
+                st.radio(
+                    "Output format",
+                    ["HCL", "JSON"],
+                    horizontal=True,
+                    key="resolve_output_format",
+                    label_visibility="collapsed",
+                )
+            with col_mode:
+                st.radio(
+                    "Output mode",
+                    ["Annotated", "Clean"],
+                    horizontal=True,
+                    key="resolve_output_mode",
+                    label_visibility="collapsed",
+                )
 
+            is_clean = mode == "Clean"
             if fmt == "HCL":
-                hcl_output = format_as_terraform(results)
+                hcl_output = format_as_terraform(results, clean=is_clean)
                 st.code(hcl_output, language="hcl")
             else:
                 import json
-                role_ids = [r.role_id for r in results if r.role_id is not None]
+                if is_clean:
+                    role_ids = [
+                        r.role_id for r in results
+                        if r.role_id is not None and not r.supersession
+                        and r.status in ("exact", "high", "medium")
+                    ]
+                else:
+                    role_ids = [r.role_id for r in results if r.role_id is not None]
                 st.code(json.dumps(role_ids, indent=2), language="json")
 
         elif resolve_clicked and not roles:
@@ -146,6 +222,9 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
                 "</div>",
                 unsafe_allow_html=True,
             )
+
+    # --- Try it! expander (full-width, below columns) ---
+    _render_try_it(_EXAMPLES, "resolve_input")
 
     # --- Review Required table (full-width, below columns) ---
     if results is not None:

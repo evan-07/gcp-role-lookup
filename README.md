@@ -1,6 +1,6 @@
 # GCP Role Lookup
 
-A Streamlit application for working with GCP IAM roles. Convert human-readable role titles to canonical role IDs, explore role permissions, search by permission string, and find the least-privilege role for a given set of requirements.
+A Streamlit application for working with GCP IAM roles. Convert human-readable role titles to canonical role IDs, deduplicate role lists to the minimum required set, explore role permissions, search by permission string, and find the least-privilege role for a given set of requirements.
 
 ---
 
@@ -31,6 +31,16 @@ Paste GCP role titles (one per line) to look up their canonical role IDs. The ap
 - **Confidence labels:** Exact / High / Medium / Low / Not found
 - **Supersession detection:** Flags roles whose permissions are fully covered by another role in the same batch
 - **Review Required table:** Surfaces all fuzzy matches and superseded roles for human review
+
+### Deduplicate Roles
+
+Paste a list of predefined GCP role IDs (one per line) to remove redundant entries. Any role whose permissions are fully covered by another role in the list is eliminated, enforcing least privilege.
+
+- **Input:** `roles/` prefixed role IDs only (predefined GCP roles)
+- **Output formats:** Terraform HCL or JSON, switchable via toggle
+- **Annotated mode:** Superseded roles appear as comments explaining why they were removed
+- **Clean mode:** Only the minimal set of kept roles, no comments
+- **Unknown IDs:** Roles not found in the data are flagged in a warning table without blocking the rest
 
 ### Role Inspector
 
@@ -70,7 +80,8 @@ gcp-role-lookup/
 │       ├── resolve.py         # Resolve Titles page
 │       ├── inspect.py         # Role Inspector page
 │       ├── permissions.py     # Permission Search page
-│       └── find_role.py       # Find Smallest Role page
+│       ├── find_role.py       # Find Smallest Role page
+│       └── deduplicate.py     # Deduplicate Roles page
 ├── data/
 │   ├── gcp_roles.json         # Role title → ID cache (bundled, refreshable)
 │   └── role_permissions.json  # Role ID → permissions map (bundled, refreshable)
@@ -80,7 +91,9 @@ gcp-role-lookup/
 │   ├── test_find_role_logic.py
 │   ├── test_inspect_logic.py
 │   ├── test_permissions_logic.py
-│   └── test_role_loader.py
+│   ├── test_role_loader.py
+│   ├── test_supersession_dedup.py
+│   └── test_formatter_dedup.py
 ├── Architecture.md            # Design decisions and technical reference
 ├── ContainerFile              # Podman/Docker build file
 ├── setup_windows.ps1          # Windows setup + launch script
@@ -339,7 +352,7 @@ Then run:
 pytest
 ```
 
-The test suite covers matching logic, permission grouping, search functions, role loader, and the Find Smallest Role algorithm (43 tests total).
+The test suite covers matching logic, permission grouping, search functions, role loader, Find Smallest Role algorithm, deduplication logic, and formatter output (71 tests total).
 
 ---
 

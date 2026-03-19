@@ -104,3 +104,117 @@ def check_supersessions(
                 break  # One superseder is enough per role
 
     return results
+
+
+# ---------------------------------------------------------------------------
+# Deduplicate role IDs
+# ---------------------------------------------------------------------------
+
+@dataclass
+class RemovedRole:
+    """A role removed from the minimal set because it is superseded."""
+
+    role_id: str             # e.g. "roles/storage.objectViewer"
+    role_title: str          # e.g. "Storage Object Viewer"
+    superseded_by_id: str    # e.g. "roles/storage.admin"
+    superseded_by_title: str  # e.g. "Storage Admin"
+
+
+@dataclass
+class DeduplicationResult:
+    """Result of deduplicating a list of role IDs."""
+
+    kept: list[str]             # Role IDs in the minimal set
+    removed: list[RemovedRole]  # Roles eliminated as redundant
+    unknown: list[str]          # Role IDs not found in permissions map
+
+
+def deduplicate_role_ids(
+    role_ids: list[str],
+    permissions: dict[str, set[str]],
+    roles: list[dict],
+) -> DeduplicationResult:
+    """
+    Return the minimal set of role IDs by removing strict-subset roles.
+
+    Receives only pre-validated ``roles/``-prefixed IDs — prefix validation
+    is the caller's responsibility. Role IDs not present in ``permissions``
+    are collected as unknown and excluded from comparison.
+
+    For every pair (A, B):
+      - If perms(A) ⊂ perms(B)  →  A is superseded by B.
+      - Roles with identical permissions: neither is a strict subset; both kept.
+
+    Args:
+        role_ids:    Pre-validated ``roles/`` prefixed role IDs.
+        permissions: Dict mapping role_id → set of permission strings.
+        roles:       Full roles list; used to look up titles by role_id.
+                     Each dict must have ``"name"`` and ``"title"`` keys.
+
+    Returns:
+        DeduplicationResult with kept, removed, and unknown lists.
+    """
+    if not role_ids:
+        return DeduplicationResult(kept=[], removed=[], unknown=[])
+
+    # Deduplicate inputs while preserving order
+    seen: set[str] = set()
+    unique_ids: list[str] = []
+    for rid in role_ids:
+        if rid not in seen:
+            seen.add(rid)
+            unique_ids.append(rid)
+    role_ids = unique_ids
+
+    # Build title lookup: role_id → display title
+    id_to_title: dict[str, str] = {
+        r["name"]: r["title"]
+        for r in roles
+        if r.get("name") and r.get("title")
+    }
+
+    # Split into known (have permissions data) and unknown
+    known: list[str] = []
+    unknown: list[str] = []
+    for role_id in role_ids:
+        if role_id in permissions:
+            known.append(role_id)
+        else:
+            unknown.append(role_id)
+
+    if len(known) < 2:
+        return DeduplicationResult(kept=known, removed=[], unknown=unknown)
+
+    # Pairwise strict-subset check — O(N²), N is typically small (≤20)
+    superseded_ids: set[str] = set()
+    removed: list[RemovedRole] = []
+
+    for i, role_a in enumerate(known):
+        if role_a in superseded_ids:
+            continue
+        perms_a = permissions[role_a]
+
+        for j, role_b in enumerate(known):
+            if i == j or role_b in superseded_ids:
+                continue
+            perms_b = permissions[role_b]
+
+            if perms_a < perms_b:  # strict subset
+                superseded_ids.add(role_a)
+                removed.append(
+                    RemovedRole(
+                        role_id=role_a,
+                        role_title=id_to_title.get(role_a, role_a),
+                        superseded_by_id=role_b,
+                        superseded_by_title=id_to_title.get(role_b, role_b),
+                    )
+                )
+                logger.info("Deduplicate: %s ⊂ %s", role_a, role_b)
+                break  # One superseder is enough per role.
+                       # Note: in a 3-way chain (A⊂B⊂C), A may be annotated as
+                       # "superseded by B" even though B is itself superseded.
+                       # The kept set is always correct; only the annotation may
+                       # point to an intermediate superseder.
+
+    kept = [r for r in known if r not in superseded_ids]
+    return DeduplicationResult(kept=kept, removed=removed, unknown=unknown)

@@ -33,9 +33,10 @@ Technical reference for the GCP Role Lookup application. Covers module responsib
 │  │           status · live refresh button          │   │
 │  └──────────────────┬──────────────────────────────┘   │
 │                     │ dispatch on st.session_state.page  │
-│       ┌─────────────┴──────────────────────────┐        │
-│       │             │              │            │        │
+│       ┌──────────────┴───────────────────────────────┐    │
+│       │              │              │               │    │
 │  resolve.py   inspect.py  permissions.py  find_role.py  │
+│                                          deduplicate.py  │
 └─────────────────────────────────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────┐
@@ -90,16 +91,25 @@ Thresholds: ≥85 = High, 60–84 = Medium, <60 = Low.
 
 ### `app/formatter.py`
 
-Converts a `list[MatchResult]` into output strings:
+Converts results into output strings for two different page flows:
 
+**Resolve Titles flow (`list[MatchResult]`):**
 - `format_as_terraform(results)` → multi-line HCL string with inline comments for fuzzy/superseded entries
 - `format_results_summary(results)` → dict of status counts (`exact`, `high`, `medium`, `low`, `not_found`, `empty`, `superseded`) used for the stat badges
+
+**Deduplicate Roles flow (`DeduplicationResult`):**
+- `format_dedup_as_hcl(result, clean=False)` → HCL with superseded roles commented out (annotated mode) or only kept roles (clean mode)
+- `format_dedup_as_json(result, clean=False)` → structured JSON object with `kept`, `superseded`, and `unknown` arrays (annotated mode) or a plain role ID array (clean mode)
 
 ---
 
 ### `app/supersession.py`
 
-Given a resolved role list and the full permissions map, identifies roles whose permission set is a strict subset of another role in the same batch. Mutates `MatchResult.supersession` in-place.
+Two distinct functions for detecting role redundancy, serving different page flows:
+
+**`check_supersessions(results, permissions, roles)`** — used by Resolve Titles. Given a resolved `list[MatchResult]` and the permissions map, identifies roles whose permission set is a strict subset of another role in the same batch. Mutates `MatchResult.supersession` in-place.
+
+**`deduplicate_role_ids(role_ids, permissions, roles)`** — used by Deduplicate Roles. Accepts a pre-validated list of `roles/` prefixed role IDs directly (no `MatchResult` objects). Returns a `DeduplicationResult` dataclass with three lists: `kept` (minimal set), `removed` (list of `RemovedRole` with title metadata), and `unknown` (IDs not in the permissions map). Deduplicates inputs and uses the same strict-subset (`<`) check as `check_supersessions`.
 
 **Why subset detection:** If role A's permissions ⊆ role B's permissions, granting both is redundant — role B already covers everything role A provides.
 
@@ -111,6 +121,23 @@ Given a resolved role list and the full permissions map, identifies roles whose 
 - `load_permissions()` — reads `data/role_permissions.json`, returns `dict[str, set[str]]`; returns `{}` if the file is missing (graceful degradation)
 - `refresh_roles_from_api()` — calls the GCP IAM API, writes updated JSON files, returns `(success, message)`
 - `clear_all_caches()` — clears `@st.cache_data` so the next render picks up refreshed data
+
+---
+
+### `app/page_views/deduplicate.py`
+
+Renders the Deduplicate Roles page. Owns:
+
+- `_validate_lines(raw_text)` — pure helper that splits textarea input into valid `roles/`-prefixed IDs and invalid lines (pre-validation unknowns)
+- Two-column layout (`col_input` / `col_output`)
+- Text area input with Deduplicate and Clear buttons
+- Results computation: `_validate_lines` → `deduplicate_role_ids` → cached in `st.session_state["deduplicate_results"]`
+- Stat badges (total inputs, kept, superseded, unknown), HCL/JSON format toggle, Annotated/Clean mode toggle
+- Code output via `st.code()` (provides built-in copy-to-clipboard)
+- Full-width Unknown IDs expander table below the columns, distinguishing pre-validation failures (non-`roles/` prefix) from data-lookup failures (not in permissions map)
+- Graceful degradation when `permissions_data` is empty: shows a warning, passes all valid IDs through as-is
+
+Imports only from `app.supersession` and `app.formatter` — no dependency on `resolve.py` or `matcher.py`.
 
 ---
 
@@ -219,6 +246,30 @@ find_smallest_roles(required, permissions_data, role_title_map)
     └── partial: list[dict] (top-N by coverage, only when exact is empty)
 ```
 
+### Deduplicate Roles flow
+
+```
+user input (text area, one role ID per line)
+    │
+    ▼
+_validate_lines(raw_text)
+    │
+    ├── valid_ids: list[str]           (start with "roles/")
+    └── pre_validation_unknowns: list[str]  (anything else)
+         │
+         ▼
+deduplicate_role_ids(valid_ids, permissions_data, roles_data)
+    │
+    ▼
+DeduplicationResult
+    ├── kept: list[str]         → minimal role set
+    ├── removed: list[RemovedRole]  → superseded roles with title metadata
+    └── unknown: list[str]      → roles/ IDs not in permissions map
+         │
+         ├── format_dedup_as_hcl(result, clean)   → HCL output
+         └── format_dedup_as_json(result, clean)  → JSON output
+```
+
 ---
 
 ## Session State Design
@@ -227,7 +278,7 @@ All keys are pre-initialised in `_DEFAULTS` in `main.py`. The initialisation loo
 
 | Key | Type | Purpose |
 |-----|------|---------|
-| `page` | `str` | Active page identifier (`resolve`, `inspect`, `permissions`, `find_role`) |
+| `page` | `str` | Active page identifier (`resolve`, `inspect`, `permissions`, `find_role`, `deduplicate`) |
 | `resolve_input` | `str` | Persists role title text area content across reruns |
 | `resolve_results` | `list[MatchResult] \| None` | Persists resolved results so the HCL/JSON toggle rerun does not re-run matching |
 | `resolve_output_format` | `str` | HCL or JSON — bound to the `st.radio` widget key |
@@ -237,6 +288,12 @@ All keys are pre-initialised in `_DEFAULTS` in `main.py`. The initialisation loo
 | `permission_search_query` | `str` | Bound to the permission search text input |
 | `find_role_input` | `str` | Persists the required-permissions text area content |
 | `roles_load_error` | `str \| None` | Error message if role data failed to load; `None` on success |
+| `deduplicate_input` | `str` | Persists role ID text area content across reruns |
+| `deduplicate_results` | `DeduplicationResult \| None` | Persists deduplication result so format/mode toggles do not re-run the logic |
+| `deduplicate_output_format` | `str` | HCL or JSON — bound to the format `st.radio` key |
+| `deduplicate_output_mode` | `str` | Annotated or Clean — bound to the mode `st.radio` key |
+| `deduplicate_pre_unknowns` | `list[str]` | Lines that failed prefix validation (non-`roles/`), stored for the unknown table |
+| `deduplicate_no_permissions` | `bool` | `True` when permissions data was missing at deduplication time; controls the inline warning |
 
 **Key pattern — `resolve_results` persistence:** Streamlit reruns the entire script on every widget interaction, including clicking the HCL/JSON radio button. Without persisting results, the output reverts to the placeholder because `resolve_clicked` is `False` on that rerun. Storing results in session state decouples the format toggle from the resolve action.
 
@@ -349,8 +406,10 @@ Test coverage by module:
 | `test_permissions_logic.py` | `sort_key()`, `find_exact_matches()`, `find_partial_matches()` |
 | `test_find_role_logic.py` | `parse_permissions_input()`, `_tier()`, `find_smallest_roles()` |
 | `test_role_loader.py` | `clear_all_caches()` |
+| `test_supersession_dedup.py` | `deduplicate_role_ids()` — supersession, no-supersession, edge cases (empty, single, unknown, identical permissions, duplicate inputs) |
+| `test_formatter_dedup.py` | `format_dedup_as_hcl()` and `format_dedup_as_json()` — annotated and clean modes, empty results, unknown passthrough |
 
-All tests are written test-first (failing before implementation). 43 tests total.
+All tests are written test-first (failing before implementation). 71 tests total.
 
 ---
 

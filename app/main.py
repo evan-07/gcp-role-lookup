@@ -158,9 +158,16 @@ _DEFAULTS: dict = {
     "inspect_diff_mode": False,
     "permission_search_query": "",
     "resolve_output_format": "HCL",
+    "resolve_output_mode": "Annotated",
     "find_role_input": "",
     "resolve_results": None,
     "roles_load_error": None,
+    "deduplicate_input": "",
+    "deduplicate_results": None,
+    "deduplicate_output_format": "HCL",
+    "deduplicate_output_mode": "Annotated",
+    "deduplicate_pre_unknowns": [],   # lines that failed prefix validation
+    "deduplicate_no_permissions": False,  # flag for missing permissions data
 }
 for _key, _val in _DEFAULTS.items():
     if _key not in st.session_state:
@@ -226,6 +233,14 @@ with st.sidebar:
         use_container_width=True,
     ):
         st.session_state["page"] = "resolve"
+        st.rerun()
+
+    if st.button(
+        "Deduplicate Roles",
+        type="primary" if page == "deduplicate" else "secondary",
+        use_container_width=True,
+    ):
+        st.session_state["page"] = "deduplicate"
         st.rerun()
 
     if st.button(
@@ -317,6 +332,9 @@ elif st.session_state["page"] == "permissions":
 elif st.session_state["page"] == "find_role":
     from app.page_views.find_role import render as render_find_role
     render_find_role(roles_data, permissions_data)
+elif st.session_state["page"] == "deduplicate":
+    from app.page_views.deduplicate import render as render_deduplicate
+    render_deduplicate(roles_data, permissions_data)
 elif st.session_state["page"] == "help":
     from app.page_views.help import render as render_help
     render_help()
