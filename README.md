@@ -32,6 +32,16 @@ Paste GCP role titles (one per line) to look up their canonical role IDs. The ap
 - **Supersession detection:** Flags roles whose permissions are fully covered by another role in the same batch
 - **Review Required table:** Surfaces all fuzzy matches and superseded roles for human review
 
+### Deduplicate Roles
+
+Paste a list of predefined GCP role IDs (one per line) to remove redundant entries. Any role whose permissions are fully covered by another role in the list is eliminated, enforcing least privilege.
+
+- **Input:** `roles/` prefixed role IDs only (predefined GCP roles)
+- **Output formats:** Terraform HCL or JSON, switchable via toggle
+- **Annotated mode:** Superseded roles appear as comments explaining why they were removed
+- **Clean mode:** Only the minimal set of kept roles, no comments
+- **Unknown IDs:** Roles not found in the data are flagged in a warning table without blocking the rest
+
 ### Role Inspector
 
 Select any GCP role to browse its full permission set, grouped by service (e.g. `bigquery`, `compute`, `storage`). Each service group is a collapsible expander showing the permissions alphabetically.
@@ -45,16 +55,6 @@ Enter an IAM permission string to find which roles grant it.
 - **Exact Matches:** Roles whose permission set includes the exact string — shown with role ID, title, and Terraform string
 - **Partial Matches:** Permission strings containing your query as a substring, ranked by the number of roles that grant them
 - Minimum 3 characters required before searching
-
-### Deduplicate Roles
-
-Paste a list of predefined GCP role IDs (one per line) to remove redundant entries. Any role whose permissions are fully covered by another role in the list is eliminated, enforcing least privilege.
-
-- **Input:** `roles/` prefixed role IDs only (predefined GCP roles)
-- **Output formats:** Terraform HCL or JSON, switchable via toggle
-- **Annotated mode:** Superseded roles appear as comments explaining why they were removed
-- **Clean mode:** Only the minimal set of kept roles, no comments
-- **Unknown IDs:** Roles not found in the data are flagged in a warning table without blocking the rest
 
 ### Find Smallest Role
 
