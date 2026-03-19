@@ -163,8 +163,6 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             st.session_state["deduplicate_results"] = None
             st.rerun()
 
-        _render_try_it(_EXAMPLES, "deduplicate_input")
-
     # Run deduplication when button clicked; cache result in session state
     # so format/mode toggles don't re-run the logic.
     pre_validation_unknowns: list[str] = []
@@ -256,6 +254,9 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
                 "</div>",
                 unsafe_allow_html=True,
             )
+
+    # --- Try it! expander (full-width, below columns) ---
+    _render_try_it(_EXAMPLES, "deduplicate_input")
 
     # --- Unknown IDs table (full-width, below columns) ---
     if result is not None:

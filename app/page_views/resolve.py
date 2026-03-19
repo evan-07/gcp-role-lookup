@@ -134,8 +134,6 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             st.session_state["resolve_results"] = None
             st.rerun()
 
-        _render_try_it(_EXAMPLES, "resolve_input")
-
     # Compute results before col_output so they're accessible for the
     # full-width review table rendered outside the columns block.
     # Results are stored in session state so the format toggle rerun
@@ -224,6 +222,9 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
                 "</div>",
                 unsafe_allow_html=True,
             )
+
+    # --- Try it! expander (full-width, below columns) ---
+    _render_try_it(_EXAMPLES, "resolve_input")
 
     # --- Review Required table (full-width, below columns) ---
     if results is not None:
