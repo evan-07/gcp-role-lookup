@@ -436,37 +436,38 @@
     <div class="flow-wrap">
       <div class="flow-title">Without This Tool</div>
       <div class="flow-high">
-        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2; min-width: 120px;">
           <div class="box-icon">🌐</div>
           <div class="box-label">Open GCP IAM Permissions Index</div>
-          <div class="box-sub">Manually navigate Google's public IAM reference</div>
         </div>
         <div class="flow-arrow" style="color: #c0392b;">→</div>
-        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2; min-width: 120px;">
           <div class="box-icon">🔍</div>
           <div class="box-label">Manual Role Lookup</div>
-          <div class="box-sub">One role at a time across multiple browser tabs</div>
         </div>
         <div class="flow-arrow" style="color: #c0392b;">→</div>
-        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2; min-width: 120px;">
           <div class="box-icon">📊</div>
           <div class="box-label">Manual Comparison</div>
-          <div class="box-sub">Side-by-side in your head or a spreadsheet</div>
         </div>
         <div class="flow-arrow" style="color: #c0392b;">→</div>
-        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2; min-width: 120px;">
           <div class="box-icon">⚠️</div>
           <div class="box-label">Potential Gaps Overlooked</div>
-          <div class="box-sub">Redundancies and over-provisioning missed by eye</div>
         </div>
         <div class="flow-arrow" style="color: #c0392b;">→</div>
-        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2; min-width: 120px;">
           <div class="box-icon">🏗️</div>
           <div class="box-label">Terraform Output</div>
-          <div class="box-sub">Manually written HCL — error-prone and potentially redundant</div>
         </div>
       </div>
-      <p style="font-size: 12px; color: var(--gray-dark); margin-top: 8px; text-align: center; font-style: italic;">Each step is manual, time-consuming, and relies on the reviewer catching overlaps by eye.</p>
+      <ol style="margin-top: 16px; padding-left: 20px;">
+        <li style="font-size: 13px; color: var(--gray-dark); line-height: 1.6; margin-bottom: 6px;"><strong>Open GCP IAM Permissions Index</strong> — Reviewers must manually navigate Google's public IAM reference, which is a lookup table — not a decision tool.</li>
+        <li style="font-size: 13px; color: var(--gray-dark); line-height: 1.6; margin-bottom: 6px;"><strong>Manual Role Lookup</strong> — Each role is looked up individually across multiple browser tabs with no filtering or comparison support.</li>
+        <li style="font-size: 13px; color: var(--gray-dark); line-height: 1.6; margin-bottom: 6px;"><strong>Manual Comparison</strong> — Permissions are compared side-by-side in your head or copied into a spreadsheet — slow and error-prone at scale.</li>
+        <li style="font-size: 13px; color: var(--gray-dark); line-height: 1.6; margin-bottom: 6px;"><strong>Potential Gaps Overlooked</strong> — Without automated overlap detection, redundant or overly broad grants are easily missed during review.</li>
+        <li style="font-size: 13px; color: var(--gray-dark); line-height: 1.6; margin-bottom: 6px;"><strong>Terraform Output</strong> — HCL is written manually based on incomplete analysis, leaving room for redundant bindings and security gaps.</li>
+      </ol>
     </div>
 
     <!-- High-level flow -->
