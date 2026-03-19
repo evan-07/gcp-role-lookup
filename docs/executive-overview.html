@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GCP Role Lookup Tool — Executive Overview</title>
+  <title>GCP IAM Lookup Tool — Executive Overview</title>
   <style>
     /* ── Reset & Base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -341,7 +341,7 @@
 <header class="site-header">
   <div class="container">
     <div class="eyebrow">Internal Tool &nbsp;·&nbsp; GCP Cloud Security</div>
-    <h1>GCP Role Lookup Tool</h1>
+    <h1>GCP IAM Lookup Tool</h1>
     <p class="subtitle">A lightweight IAM analysis tool that turns raw GCP reference data into faster, safer least-privilege decisions.</p>
   </div>
 </header>
@@ -397,7 +397,7 @@
 <section id="solution">
   <div class="container">
     <div class="section-label">The Solution</div>
-    <h2 class="section-title">GCP Role Lookup Tool</h2>
+    <h2 class="section-title">GCP IAM Lookup Tool</h2>
     <div class="divider"></div>
     <p class="solution-intro">
       A self-service Streamlit web app that replaces manual IAM research with structured, automated analysis.
@@ -432,9 +432,52 @@
     <h2 class="section-title">From Input to Terraform-Ready Output</h2>
     <div class="divider"></div>
 
+    <!-- Before flow -->
+    <div class="flow-wrap">
+      <div class="flow-title">Without This Tool</div>
+      <div class="flow-high">
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+          <div class="box-icon">🧑‍💼</div>
+          <div class="box-label">IAM Request / PR Review</div>
+          <div class="box-sub">A role grant or Terraform change arrives for review</div>
+        </div>
+        <div class="flow-arrow" style="color: #c0392b;">→</div>
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+          <div class="box-icon">🌐</div>
+          <div class="box-label">Open GCP IAM Permissions Index</div>
+          <div class="box-sub">Manually navigate Google's public IAM reference</div>
+        </div>
+        <div class="flow-arrow" style="color: #c0392b;">→</div>
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+          <div class="box-icon">🔍</div>
+          <div class="box-label">Manual Role Lookup</div>
+          <div class="box-sub">One role at a time across multiple browser tabs</div>
+        </div>
+        <div class="flow-arrow" style="color: #c0392b;">→</div>
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+          <div class="box-icon">📊</div>
+          <div class="box-label">Manual Comparison</div>
+          <div class="box-sub">Side-by-side in your head or a spreadsheet</div>
+        </div>
+        <div class="flow-arrow" style="color: #c0392b;">→</div>
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+          <div class="box-icon">⚠️</div>
+          <div class="box-label">Gaps Overlooked</div>
+          <div class="box-sub">Redundancies and over-provisioning missed by eye</div>
+        </div>
+        <div class="flow-arrow" style="color: #c0392b;">→</div>
+        <div class="flow-box" style="border-color: #c0392b; background: #fdf3f2;">
+          <div class="box-icon">✍️</div>
+          <div class="box-label">Grant / Approve</div>
+          <div class="box-sub">Decision made with incomplete information</div>
+        </div>
+      </div>
+      <p style="font-size: 12px; color: var(--gray-dark); margin-top: 8px; text-align: center; font-style: italic;">Each step is manual, time-consuming, and relies on the reviewer catching overlaps by eye.</p>
+    </div>
+
     <!-- High-level flow -->
     <div class="flow-wrap">
-      <div class="flow-title">High-Level Flow</div>
+      <div class="flow-title">With This Tool</div>
       <div class="flow-high">
         <div class="flow-box">
           <div class="box-icon">🧑‍💼</div>
@@ -444,7 +487,7 @@
         <div class="flow-arrow">→</div>
         <div class="flow-box highlight">
           <div class="box-icon">⚙️</div>
-          <div class="box-label">GCP Role Lookup Tool</div>
+          <div class="box-label">GCP IAM Lookup Tool</div>
           <div class="box-sub">Fuzzy matching · Overlap detection · Least-privilege analysis</div>
         </div>
         <div class="flow-arrow">→</div>
@@ -521,8 +564,8 @@
         <div class="stat-label">saved per month for teams handling ~120 IAM requests</div>
       </div>
       <div class="stat-card">
-        <div class="stat-num">10–60%</div>
-        <div class="stat-label">reduction in IAM research and review effort</div>
+        <div class="stat-num">~25%</div>
+        <div class="stat-label">average reduction in IAM request resolution time</div>
       </div>
     </div>
 
@@ -553,7 +596,7 @@
 <section id="tech-stack">
   <div class="container">
     <div class="section-label">Technology Stack</div>
-    <h2 class="section-title">Lightweight, Internal, No New Infrastructure</h2>
+    <h2 class="section-title">Lightweight, Local, No New Infrastructure</h2>
     <div class="divider"></div>
     <p class="section-desc">Built with standard Python tooling. No external database, no separate backend, no cloud infrastructure required to run.</p>
 
@@ -595,9 +638,8 @@
 ══════════════════════════════════ -->
 <footer>
   <div class="container">
-    <strong>GCP Role Lookup Tool</strong> &nbsp;·&nbsp; Internal Tooling &nbsp;·&nbsp; Cloud Security &amp; IAM
+    <strong>GCP IAM Lookup Tool</strong> &nbsp;·&nbsp; Internal Tooling &nbsp;·&nbsp; Cloud Security &amp; IAM
     <br style="margin-bottom: 6px" />
-    For questions or access, contact your Cloud Security team.
   </div>
 </footer>
 
