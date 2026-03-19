@@ -115,9 +115,6 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
 
     role_title_map = {r["name"]: r["title"] for r in roles}
 
-    # --- Try it! expander (above columns so it's always visible) ---
-    _render_try_it(_EXAMPLES)
-
     col_input, col_output = st.columns([1, 2], gap="large")
 
     role_options = [""] + sorted(role_title_map.keys())
@@ -166,79 +163,74 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
                 "</div>",
                 unsafe_allow_html=True,
             )
-            return
 
         # Role A not found anywhere
-        if role_a_id not in permissions and role_a_id not in role_title_map:
+        elif role_a_id not in permissions and role_a_id not in role_title_map:
             st.error(f"Role ID not found: {role_a_id}")
-            return
 
         # Role A known but has no permission data (partial data)
-        if role_a_id not in permissions:
+        elif role_a_id not in permissions:
             st.subheader(role_title_map.get(role_a_id, "(custom role)"))
             st.warning(
                 "Permission data unavailable for this role. Try refreshing."
             )
-            return
 
-        perms_a: set[str] = permissions[role_a_id]
+        else:
+            perms_a: set[str] = permissions[role_a_id]
 
-        if not diff_mode:
-            # Single-role output
-            st.subheader(role_title_map.get(role_a_id, "(custom role)"))
-            st.caption(f"{len(perms_a)} permissions")
-            _render_grouped(perms_a)
-            return
+            if not diff_mode or not st.session_state["inspect_role_b"]:
+                # Single-role output (or diff on but Role B not yet selected)
+                st.subheader(role_title_map.get(role_a_id, "(custom role)"))
+                st.caption(f"{len(perms_a)} permissions")
+                _render_grouped(perms_a)
+                if diff_mode and not st.session_state["inspect_role_b"]:
+                    pass  # Role B selectbox visible but empty — Role A shown above
 
-        # Diff mode — Role B evaluation
-        role_b_id = st.session_state["inspect_role_b"]
+            else:
+                # Diff mode — Role B evaluation
+                role_b_id = st.session_state["inspect_role_b"]
 
-        if not role_b_id:
-            # Diff on but Role B empty — show Role A only
-            st.subheader(role_title_map.get(role_a_id, "(custom role)"))
-            st.caption(f"{len(perms_a)} permissions")
-            _render_grouped(perms_a)
-            return
+                # Role B not found anywhere
+                if role_b_id not in permissions and role_b_id not in role_title_map:
+                    st.subheader(role_title_map.get(role_a_id, "(custom role)"))
+                    st.caption(f"{len(perms_a)} permissions")
+                    _render_grouped(perms_a)
+                    st.error(f"Role ID not found: {role_b_id}")
 
-        # Role B not found anywhere
-        if role_b_id not in permissions and role_b_id not in role_title_map:
-            st.subheader(role_title_map.get(role_a_id, "(custom role)"))
-            st.caption(f"{len(perms_a)} permissions")
-            _render_grouped(perms_a)
-            st.error(f"Role ID not found: {role_b_id}")
-            return
+                # Role B known but has no permission data (partial data)
+                elif role_b_id not in permissions:
+                    st.subheader(role_title_map.get(role_a_id, "(custom role)"))
+                    st.caption(f"{len(perms_a)} permissions")
+                    _render_grouped(perms_a)
+                    st.warning("Permission data unavailable for Role B.")
 
-        # Role B known but has no permission data (partial data)
-        if role_b_id not in permissions:
-            st.subheader(role_title_map.get(role_a_id, "(custom role)"))
-            st.caption(f"{len(perms_a)} permissions")
-            _render_grouped(perms_a)
-            st.warning("Permission data unavailable for Role B.")
-            return
+                else:
+                    perms_b: set[str] = permissions[role_b_id]
 
-        perms_b: set[str] = permissions[role_b_id]
+                    # Both roles resolve — render three-column diff
+                    only_a = perms_a - perms_b
+                    in_both = perms_a & perms_b
+                    only_b = perms_b - perms_a
 
-        # Both roles resolve — render three-column diff
-        only_a = perms_a - perms_b
-        in_both = perms_a & perms_b
-        only_b = perms_b - perms_a
+                    title_a = role_title_map.get(role_a_id, "(custom role)")
+                    title_b = role_title_map.get(role_b_id, "(custom role)")
 
-        title_a = role_title_map.get(role_a_id, "(custom role)")
-        title_b = role_title_map.get(role_b_id, "(custom role)")
+                    diff_col_a, diff_col_both, diff_col_b = st.columns([1, 1, 1])
 
-        diff_col_a, diff_col_both, diff_col_b = st.columns([1, 1, 1])
+                    with diff_col_a:
+                        st.subheader("Only in A")
+                        st.caption(f"{title_a} · {len(only_a)} permissions")
+                        _render_grouped(only_a)
 
-        with diff_col_a:
-            st.subheader("Only in A")
-            st.caption(f"{title_a} · {len(only_a)} permissions")
-            _render_grouped(only_a)
+                    with diff_col_both:
+                        st.subheader("In both")
+                        st.caption(f"{len(in_both)} permissions")
+                        _render_grouped(in_both)
 
-        with diff_col_both:
-            st.subheader("In both")
-            st.caption(f"{len(in_both)} permissions")
-            _render_grouped(in_both)
+                    with diff_col_b:
+                        st.subheader("Only in B")
+                        st.caption(f"{title_b} · {len(only_b)} permissions")
+                        _render_grouped(only_b)
 
-        with diff_col_b:
-            st.subheader("Only in B")
-            st.caption(f"{title_b} · {len(only_b)} permissions")
-            _render_grouped(only_b)
+    # --- Try it! expander (full-width, below columns) ---
+    _render_try_it(_EXAMPLES)
