@@ -1,7 +1,7 @@
 """
 main.py
 
-Streamlit entry point for the GCP Role Lookup tool.
+Streamlit entry point for the GCP IAM Lookup tool.
 Handles page config, global CSS, session state init, data loading,
 sidebar navigation, and dispatch to active page modules.
 """
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Page config (must be first Streamlit call)
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="GCP Role Lookup",
+    page_title="GCP IAM Lookup",
     page_icon="🔐",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -213,7 +213,7 @@ with st.sidebar:
     st.markdown(
         "<div style='font-family:Inter;font-weight:800;"
         "font-size:1.1rem;color:#e6edf3;margin-bottom:0.25rem'>"
-        "🔐 GCP Role Lookup</div>",
+        "🔐 GCP IAM Lookup</div>",
         unsafe_allow_html=True,
     )
     st.markdown(
