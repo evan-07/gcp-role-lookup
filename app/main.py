@@ -235,6 +235,14 @@ with st.sidebar:
         st.rerun()
 
     if st.button(
+        "Deduplicate Roles",
+        type="primary" if page == "deduplicate" else "secondary",
+        use_container_width=True,
+    ):
+        st.session_state["page"] = "deduplicate"
+        st.rerun()
+
+    if st.button(
         "Role Inspector",
         type="primary" if page == "inspect" else "secondary",
         use_container_width=True,
@@ -256,14 +264,6 @@ with st.sidebar:
         use_container_width=True,
     ):
         st.session_state["page"] = "find_role"
-        st.rerun()
-
-    if st.button(
-        "Deduplicate Roles",
-        type="primary" if page == "deduplicate" else "secondary",
-        use_container_width=True,
-    ):
-        st.session_state["page"] = "deduplicate"
         st.rerun()
 
     if st.button(
