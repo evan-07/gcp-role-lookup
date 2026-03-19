@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(pytest tests/test_inspect_logic.py::test_try_it_examples_structure -v)",
-      "Bash(pytest tests/ -v)"
-    ]
-  }
-}
