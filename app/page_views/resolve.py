@@ -13,6 +13,57 @@ from app.matcher import MatchResult, match_titles_bulk
 from app.supersession import check_supersessions
 
 
+_EXAMPLES: list[dict] = [
+    {
+        "name": "Common roles",
+        "description": "Exact matches for frequently used roles across BigQuery, Storage, Pub/Sub, and Cloud Run.",
+        "text": (
+            "BigQuery Data Editor\n"
+            "BigQuery Data Viewer\n"
+            "Storage Admin\n"
+            "Pub/Sub Publisher\n"
+            "Cloud Run Invoker"
+        ),
+    },
+    {
+        "name": "Fuzzy matches",
+        "description": "Near-typos — load this and click Resolve Roles to see confidence scoring and the Review Required table.",
+        "text": (
+            "BigQuery Data Editer\n"
+            "Stoarge Admin\n"
+            "PubSub Publishr\n"
+            "Cloud Run Invokr"
+        ),
+    },
+    {
+        "name": "Superseded roles",
+        "description": (
+            "Includes roles whose permissions are fully covered by another role in the batch. "
+            "Requires role_permissions.json to be loaded (see sidebar) to show supersession markers; "
+            "otherwise resolves normally without them."
+        ),
+        "text": (
+            "BigQuery Data Editor\n"
+            "BigQuery Data Viewer\n"
+            "Storage Admin\n"
+            "Storage Object Viewer"
+        ),
+    },
+]
+
+
+def _render_try_it(examples: list[dict], state_key: str) -> None:
+    """Render a collapsible expander with example inputs the user can load."""
+    with st.expander("💡 Try it!", expanded=False):
+        for i, ex in enumerate(examples):
+            st.markdown(f"**{ex['name']}**")
+            st.caption(ex["description"])
+            st.code(ex["text"], language="text")
+            if st.button("Load", key=f"try_{state_key}_{i}"):
+                st.session_state[state_key] = ex["text"]
+                st.rerun()
+
+
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Resolve Titles page."""
 
@@ -76,6 +127,8 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             st.session_state["resolve_input"] = ""
             st.session_state["resolve_results"] = None
             st.rerun()
+
+        _render_try_it(_EXAMPLES, "resolve_input")
 
     # Compute results before col_output so they're accessible for the
     # full-width review table rendered outside the columns block.
