@@ -157,6 +157,15 @@ def deduplicate_role_ids(
     if not role_ids:
         return DeduplicationResult(kept=[], removed=[], unknown=[])
 
+    # Deduplicate inputs while preserving order
+    seen: set[str] = set()
+    unique_ids: list[str] = []
+    for rid in role_ids:
+        if rid not in seen:
+            seen.add(rid)
+            unique_ids.append(rid)
+    role_ids = unique_ids
+
     # Build title lookup: role_id → display title
     id_to_title: dict[str, str] = {
         r["name"]: r["title"]
@@ -201,7 +210,11 @@ def deduplicate_role_ids(
                     )
                 )
                 logger.info("Deduplicate: %s ⊂ %s", role_a, role_b)
-                break  # One superseder is enough per role
+                break  # One superseder is enough per role.
+                       # Note: in a 3-way chain (A⊂B⊂C), A may be annotated as
+                       # "superseded by B" even though B is itself superseded.
+                       # The kept set is always correct; only the annotation may
+                       # point to an intermediate superseder.
 
     kept = [r for r in known if r not in superseded_ids]
     return DeduplicationResult(kept=kept, removed=removed, unknown=unknown)

@@ -113,7 +113,7 @@ def test_json_annotated_superseded_array():
     assert "reason" in entry
 
 
-def test_json_annotated_no_removal_no_superseded_key():
+def test_json_annotated_no_removal_superseded_is_empty_list():
     output = format_dedup_as_json(RESULT_NO_REMOVAL, clean=False)
     parsed = json.loads(output)
     assert parsed["kept"] == ["roles/storage.admin", "roles/bigquery.dataViewer"]

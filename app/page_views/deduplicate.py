@@ -136,12 +136,12 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
 
         if result is not None:
             all_unknowns = pre_validation_unknowns + result.unknown
-            total_valid = len(result.kept) + len(result.removed)
+            total_inputs = len(result.kept) + len(result.removed) + len(result.unknown) + len(pre_validation_unknowns)
 
             st.markdown(
                 f"""
                 <div class="stat-row">
-                  <span class="stat-badge badge-total">{total_valid} inputs</span>
+                  <span class="stat-badge badge-total">{total_inputs} inputs</span>
                   <span class="stat-badge badge-exact">✓ {len(result.kept)} kept</span>
                   <span class="stat-badge badge-superseded">⛔ {len(result.removed)} superseded</span>
                   <span class="stat-badge badge-miss">✗ {len(all_unknowns)} unknown</span>

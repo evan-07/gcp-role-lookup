@@ -9,6 +9,7 @@ commented out with inline warnings and confidence levels.
 import json
 
 from app.matcher import MatchResult
+from app.supersession import DeduplicationResult, RemovedRole
 
 
 def _confidence_label(score: float) -> str:
@@ -135,7 +136,7 @@ def format_results_summary(
 # ---------------------------------------------------------------------------
 
 def format_dedup_as_hcl(
-    result: "DeduplicationResult",
+    result: DeduplicationResult,
     clean: bool = False,
 ) -> str:
     """
@@ -155,8 +156,6 @@ def format_dedup_as_hcl(
     Returns:
         Formatted multi-line string ready to paste into Terraform.
     """
-    from app.supersession import DeduplicationResult  # local import avoids circular
-
     if not result.kept and not result.removed:
         return ""
 
@@ -177,7 +176,7 @@ def format_dedup_as_hcl(
 
 
 def format_dedup_as_json(
-    result: "DeduplicationResult",
+    result: DeduplicationResult,
     clean: bool = False,
 ) -> str:
     """

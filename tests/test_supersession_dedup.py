@@ -161,3 +161,14 @@ def test_all_unknown_roles():
     assert result.kept == []
     assert result.removed == []
     assert set(result.unknown) == {"roles/fake.one", "roles/fake.two"}
+
+
+def test_duplicate_input_ids_deduplicated():
+    """Duplicate role IDs in input are treated as a single role."""
+    result = deduplicate_role_ids(
+        ["roles/storage.admin", "roles/storage.admin", "roles/storage.objectViewer"],
+        PERMISSIONS,
+        ROLES,
+    )
+    assert result.kept == ["roles/storage.admin"]
+    assert len(result.removed) == 1
