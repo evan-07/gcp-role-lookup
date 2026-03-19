@@ -9,6 +9,49 @@ Falls back to top partial matches when no exact match exists.
 import streamlit as st
 
 
+_EXAMPLES: list[dict] = [
+    {
+        "name": "BigQuery write access",
+        "description": "Find the smallest role that covers common BigQuery table write operations.",
+        "text": (
+            "bigquery.tables.create\n"
+            "bigquery.tables.delete\n"
+            "bigquery.datasets.get"
+        ),
+    },
+    {
+        "name": "Storage read access",
+        "description": "Find the narrowest role that covers reading objects from GCS buckets.",
+        "text": (
+            "storage.buckets.get\n"
+            "storage.objects.get\n"
+            "storage.objects.list"
+        ),
+    },
+    {
+        "name": "Pub/Sub subscriber",
+        "description": "Find the least-privilege role for a Pub/Sub subscriber workload.",
+        "text": (
+            "pubsub.subscriptions.consume\n"
+            "pubsub.subscriptions.get\n"
+            "pubsub.topics.attachSubscription"
+        ),
+    },
+]
+
+
+def _render_try_it(examples: list[dict], state_key: str) -> None:
+    """Render a collapsible expander with example inputs the user can load."""
+    with st.expander("💡 Try it!", expanded=False):
+        for i, ex in enumerate(examples):
+            st.markdown(f"**{ex['name']}**")
+            st.caption(ex["description"])
+            st.code(ex["text"], language="text")
+            if st.button("Load", key=f"try_{state_key}_{i}"):
+                st.session_state[f"_load_{state_key}"] = ex["text"]
+                st.rerun()
+
+
 def parse_permissions_input(raw: str) -> set[str]:
     """Parse raw text area input into a set of lowercased permission strings.
 
@@ -76,6 +119,12 @@ def find_smallest_roles(
 def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     """Render the Find Smallest Role page."""
 
+    # Resolve any pending Try it! load before the text_area widget is instantiated.
+    if "_load_find_role_input" in st.session_state:
+        st.session_state["find_role_input"] = st.session_state.pop(
+            "_load_find_role_input"
+        )
+
     st.markdown(
         """
         <div class="app-header">
@@ -111,6 +160,9 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
     )
 
     find_clicked = st.button("Find Role →", type="primary")
+
+    # --- Try it! expander (always visible, below button) ---
+    _render_try_it(_EXAMPLES, "find_role_input")
 
     if not find_clicked:
         return

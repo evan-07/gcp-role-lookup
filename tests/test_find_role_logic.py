@@ -126,3 +126,14 @@ def test_exact_suppresses_partial():
     exact, partial = find_smallest_roles({"x.y.z", "a.b.c"}, perms, {})
     assert len(exact) == 1
     assert partial == []
+
+
+def test_try_it_examples_structure():
+    from app.page_views.find_role import _EXAMPLES
+    for ex in _EXAMPLES:
+        assert "name" in ex
+        assert "description" in ex
+        assert "text" in ex
+        assert ex["name"]
+        assert ex["description"]
+        assert ex["text"]
