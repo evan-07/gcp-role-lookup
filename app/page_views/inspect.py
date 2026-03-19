@@ -233,4 +233,5 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
                         _render_grouped(only_b)
 
     # --- Try it! expander (full-width, below columns) ---
+    st.markdown("<div style='margin-top: 1rem'></div>", unsafe_allow_html=True)
     _render_try_it(_EXAMPLES)
