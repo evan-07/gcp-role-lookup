@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# GCP Role Lookup - Linux/macOS Setup Helper
+# GCP IAM Lookup - Linux/macOS Setup Helper
 #
 # Purpose: Validate prerequisites and optionally set up ADC on Linux/macOS.
 # Usage: ./setup_linux.sh
@@ -35,7 +35,7 @@ warning() { echo -e "\033[1;33m[WARN]\033[0m $*"; }
 error() { echo -e "\033[1;31m[ERROR]\033[0m $*"; }
 
 echo
-echo "=== GCP Role Lookup - Linux/macOS Setup Helper ==="
+echo "=== GCP IAM Lookup - Linux/macOS Setup Helper ==="
 echo
 
 SETUP_ADC_NOW=false

@@ -1,6 +1,6 @@
 # Architecture
 
-Technical reference for the GCP Role Lookup application. Covers module responsibilities, data flow, session state design, key implementation decisions, and Streamlit-specific patterns used throughout the codebase.
+Technical reference for the GCP IAM Lookup application. Covers module responsibilities, data flow, session state design, key implementation decisions, and Streamlit-specific patterns used throughout the codebase.
 
 ---
 

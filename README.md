@@ -1,4 +1,4 @@
-# GCP Role Lookup
+# GCP IAM Lookup
 
 A Streamlit application for working with GCP IAM roles. Convert human-readable role titles to canonical role IDs, deduplicate role lists to the minimum required set, explore role permissions, search by permission string, and find the least-privilege role for a given set of requirements.
 

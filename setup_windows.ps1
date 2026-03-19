@@ -1,4 +1,4 @@
-# GCP Role Lookup - Windows Setup Helper
+# GCP IAM Lookup - Windows Setup Helper
 #
 # Purpose: Validate prerequisites and set up GCP authentication on Windows.
 # Usage: .\setup_windows.ps1
@@ -33,7 +33,7 @@ function Write-Info {
 }
 
 Write-Host ""
-Write-Host "=== GCP Role Lookup - Windows Setup Helper ===" -ForegroundColor Cyan
+Write-Host "=== GCP IAM Lookup - Windows Setup Helper ===" -ForegroundColor Cyan
 Write-Host ""
 
 # Ask once, up front, whether ADC setup is desired (optional, default: no)

@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# GCP Role Lookup — Podman-compatible Containerfile
+# GCP IAM Lookup — Podman-compatible Containerfile
 #
 # Build:  podman build -t gcp-role-lookup .
 #
