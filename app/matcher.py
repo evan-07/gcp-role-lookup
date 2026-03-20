@@ -154,10 +154,12 @@ def match_title(
         )
 
     # --- Fuzzy match ---
+    input_words = _tokenize(input_clean)
+
     results = process.extract(
         input_clean,
         titles,
-        scorer=fuzz.WRatio,
+        scorer=fuzz.token_sort_ratio,
         limit=MAX_SUGGESTIONS,
     )
 
@@ -167,9 +169,7 @@ def match_title(
             status="not_found",
         )
 
-    best_title, best_score, _ = results[0]
-    best_role_id = title_to_id.get(best_title.lower())
-
+    # Build suggestions from raw scores BEFORE applying penalties
     suggestions = [
         {
             "title": r[0],
@@ -179,9 +179,27 @@ def match_title(
         for r in results
     ]
 
-    if best_score >= THRESHOLD_HIGH:
+    # Apply Jaccard gate and length penalty to determine effective scores
+    scored: list[tuple[str, float]] = []
+    for title_candidate, raw_score, _idx in results:
+        candidate_words = _tokenize(title_candidate)
+        effective_score = float(raw_score)
+
+        if len(input_words) >= JACCARD_MIN_INPUT_WORDS:
+            jaccard = _jaccard(input_words, candidate_words)
+            if jaccard < JACCARD_MIN:
+                effective_score = min(effective_score, THRESHOLD_MEDIUM - 1)
+
+        effective_score *= _length_penalty(len(input_words), len(candidate_words))
+        scored.append((title_candidate, effective_score))
+
+    scored.sort(key=lambda x: x[1], reverse=True)
+    best_title, best_effective_score = scored[0]
+    best_role_id = title_to_id.get(best_title.lower())
+
+    if best_effective_score >= THRESHOLD_HIGH:
         status = "high"
-    elif best_score >= THRESHOLD_MEDIUM:
+    elif best_effective_score >= THRESHOLD_MEDIUM:
         status = "medium"
     else:
         status = "low"
@@ -190,7 +208,7 @@ def match_title(
         input_title=input_clean,
         matched_title=best_title,
         role_id=best_role_id,
-        confidence=round(best_score, 1),
+        confidence=round(best_effective_score, 1),
         status=status,
         suggestions=suggestions,
     )
