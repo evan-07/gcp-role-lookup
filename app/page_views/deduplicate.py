@@ -159,7 +159,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             )
 
         if clear_clicked:
-            st.session_state["deduplicate_input"] = ""
+            st.session_state["_load_deduplicate_input"] = ""
             st.session_state["deduplicate_results"] = None
             st.rerun()
 

@@ -130,7 +130,7 @@ def render(roles: list[dict], permissions: dict[str, set[str]]) -> None:
             )
 
         if clear_clicked:
-            st.session_state["resolve_input"] = ""
+            st.session_state["_load_resolve_input"] = ""
             st.session_state["resolve_results"] = None
             st.rerun()
 
