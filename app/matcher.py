@@ -104,6 +104,21 @@ def _jaccard(a_words: set[str], b_words: set[str]) -> float:
     return len(a_words & b_words) / len(union)
 
 
+def _length_penalty(input_count: int, candidate_count: int) -> float:
+    """
+    Penalty multiplier when candidate title has more words than input.
+
+    Formula: LENGTH_PENALTY_FACTOR ** max(0, floor(candidate/input) - 1)
+
+    Examples:
+        ratio < 2.0  → 1.0   (no penalty)
+        ratio 2.0    → 0.85
+        ratio 3.0    → 0.85² ≈ 0.72
+    """
+    ratio = candidate_count / max(input_count, 1)
+    return LENGTH_PENALTY_FACTOR ** max(0, math.floor(ratio) - 1)
+
+
 def match_title(
     input_title: str,
     roles: list[dict],
