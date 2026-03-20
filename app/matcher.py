@@ -6,6 +6,7 @@ Uses exact matching first, then rapidfuzz for fuzzy suggestions.
 """
 
 import logging
+import math
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
@@ -20,6 +21,12 @@ logger = logging.getLogger(__name__)
 THRESHOLD_HIGH = 85
 THRESHOLD_MEDIUM = 60
 MAX_SUGGESTIONS = 3
+JACCARD_MIN = 0.30
+JACCARD_MIN_INPUT_WORDS = 3
+LENGTH_PENALTY_FACTOR = 0.85
+STOPWORDS = frozenset({
+    "and", "or", "the", "of", "for", "a", "an", "to", "in", "with",
+})
 
 
 @dataclass
@@ -70,6 +77,18 @@ def _build_index(
             titles.append(title)
 
     return title_to_id, titles
+
+
+def _tokenize(title: str) -> set[str]:
+    """
+    Lowercase and split title into word tokens, removing stopwords.
+
+    If stripping stopwords would produce an empty set, returns the full
+    lowercased token set to avoid downstream division-by-zero.
+    """
+    words = {w.lower() for w in title.split()}
+    filtered = words - STOPWORDS
+    return filtered if filtered else words
 
 
 def match_title(
