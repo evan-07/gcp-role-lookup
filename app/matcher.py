@@ -91,6 +91,19 @@ def _tokenize(title: str) -> set[str]:
     return filtered if filtered else words
 
 
+def _jaccard(a_words: set[str], b_words: set[str]) -> float:
+    """
+    Compute Jaccard similarity: |intersection| / |union|.
+
+    Returns 0.0 if both sets are empty, or if one set is empty and the
+    other is not (intersection is empty, union is non-zero).
+    """
+    union = a_words | b_words
+    if not union:
+        return 0.0
+    return len(a_words & b_words) / len(union)
+
+
 def match_title(
     input_title: str,
     roles: list[dict],
